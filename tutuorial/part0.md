@@ -18,7 +18,17 @@ For this tutorial I will be using node v12.13.1.
 
 Any text editor will work for Javacript. I personally use Visual Studio Code. In the past I have used Atom and Sublime. It really doesn't matter what editor you use so long as it helps you to be productive. So just pick one if you don't already have a daily driver.
 
-## Initialize The Repo
+## Cloning Gobs O' Goblins
+
+How to clone the repo
+
+## File Structure
+
+Go over basic file structure to start
+
+## Github repo
+
+## Deploy!
 
 Let's create a folder for our game and initialize the repo with npm.
 
@@ -77,10 +87,6 @@ OK. This next bit is a necessary evil. Modern web development requires build too
 We're going to rip off the band-aid and just write our own webpack config. You're welcome to read through the entire file and make any changes you want or need as your project grows but for now we're just gonna install some dev dependencies, paste some code to a new file and get on with it.
 
 Ok - go ahead and install this list dev-dependencies:
-
-```
-
-```
 
 ```javascript
 const path = require("path");
