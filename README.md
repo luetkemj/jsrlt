@@ -1,6 +1,6 @@
 # Javascript Roguelike Tutorial
 
-- Loosely follows the Roguelike Tutorial
+- Follows the Roguelike Tutorial
 - Javascript, HTML Canvas, Node.js, and Webpack
 - Continous deployment to github pages from the beginning
 

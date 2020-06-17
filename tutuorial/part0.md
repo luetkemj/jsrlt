@@ -6,203 +6,101 @@ This tutorial assumes some basic familiarity with programming in general and Jav
 
 That said - who am I to tell you what to do? Feel free to ignore that last paragraph and carry on!
 
-## Installing Node
+## Assumptions
 
-If you already have node installed on your machine, you're good to go. If not I recommend installing it with nvm. You'll thank yourself later, I promise.
+You will need a github account and git installed on your machine.
 
-For this tutorial I will be using node v12.13.1.
+[Install git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 
-[Installation instructions for nvm and node are available here.](https://github.com/nvm-sh/nvm#installing-and-updating)
+If you don't already have node installed on your machine I recommend installing it with nvm. You'll thank yourself later, I promise. For this tutorial I will be using `node v12.13.1`.
+
+[Install nvm and node](https://github.com/nvm-sh/nvm#installing-and-updating)
 
 ## Editors
 
-Any text editor will work for Javacript. I personally use Visual Studio Code. In the past I have used Atom and Sublime. It really doesn't matter what editor you use so long as it helps you to be productive. So just pick one if you don't already have a daily driver.
+Any text editor will work for Javacript. I personally use [Visual Studio Code](https://code.visualstudio.com/). In the past I have used Atom and Sublime among others. It really doesn't matter what editor you use so long as it helps you to be productive. Just pick one if you don't already have a daily driver.
 
-## Cloning Gobs O' Goblins
+## Making sure everything works
 
-How to clone the repo
+To begin you will need to clone the basic starter project. It includes a dev-server for local development, a preprod environment for testing your build, and a deploy script for github pages so you can host your game online for free.
 
-## File Structure
-
-Go over basic file structure to start
-
-## Github repo
-
-## Deploy!
-
-Let's create a folder for our game and initialize the repo with npm.
-
-`mkdir ./gobs-o-goblins && cd ./gobs-o-goblins`
-
-`npm init`
-
-Go ahead and accept all the defaults for now.
-
-## Quality of Life Dev Tools
-
-We'll be using npm to install our dependencies as our project grows. I like to pin the dependencies to an exact version. This ensures we always know exactly what third party libraries are installed in our project. To do this we just need to add simple npm settings file.
-
-Create the file `.npmrc` at project root and paste the following:
-
-```
-save-exact=true
+```bash
+git clone git@github.com:luetkemj/jsrlt-starter.git gobs-o-goblins
+cd ./gobs-o-goblins
 ```
 
-Next, I like to use prettier to format my code. It's super opinionated about code style so I don't have to be. I use the default settings so all we need to do after installing it is tell it what directories not to manage.
+### Installation
 
-First let's install prettier as a development dependency:
+There are bunch of devDependencies we need to install before we can run the app. None of these will end up in the production build so don't worry about bloat.
 
-`npm install --save-dev prettier`
+`npm install`
 
-Next lets add an ignore file to let prettier know what directories it can leave alone.
+### Dev
 
-Create the file `.prettierignore` at project root and paste the following:
+This project uses a webpack development server with hot reloading. Run `npm start` to boot up the server. After a moment you should be able to access your project at [http://localhost:8080/](http://localhost:8080/). The server will reload the app automatically on save. To give it a try go ahead and make the following change in index.html:
 
-```
-/dist
-/node_modules
-```
-
-Git can ignore those directories too so we'll also add a gitignore file with the same contents.
-
-Create the file `.gitignore` at project root and paste the following:
-
-```
-/dist
-/node_modules
+```diff
+- <p>Hello World</p>
++ <p>Gobs O' Goblins</p>
 ```
 
-Ok! Now is a good time to save our progress. Let's initialize our git repo and make our first commit.
+Save your changes and the browser will reload automatically. Cool!
 
-```
-git init
+Don't forget to commit your changes to git.
+
+```bash
 git add .
-git commit -m 'init'
+git commit -m 'my first commit'
 ```
 
-## Webpack
+### Preprod
 
-OK. This next bit is a necessary evil. Modern web development requires build tools. You can try using config-free build tools but they aren't really config-free - just config-hidden - often an abstraction layer on top of webpack. The moment you have to do that one thing that's just a bit different from the "config-free" tool you're using... you have my pity.
+Sometimes there are subtle differences between the raw code and what gets compiled for production. "It works on my machine" is a common developer excuse but it doesn't your fanbase any good. This project includes a preprod environment for testing your compiled code locally before deploying it to production.
 
-We're going to rip off the band-aid and just write our own webpack config. You're welcome to read through the entire file and make any changes you want or need as your project grows but for now we're just gonna install some dev dependencies, paste some code to a new file and get on with it.
+Run `npm run preprod` to create a production build and serve it locally. After the build is complete your browser should automatically open a new tab running the app. Go ahead and try it!
 
-Ok - go ahead and install this list dev-dependencies:
+### Deploy
+
+Finally we will create a repo for our project on github, push everything and then deploy it to production.
+
+To start, go to github and create a new repository. Name it `gobs-o-goblins` and click `Create repository`.
+
+We can now push our local code to the new remote. Github has some code snippets for quick setup. We have an existing repository so copy the second snippet under `…or push an existing repository from the command line` it looks like this:
+
+```bash
+git remote add origin git@github.com:your-github-username/gobs-o-goblins.git
+git push -u origin master
+```
+
+Don't forget to replace `your-github-username` with your actual github username :)
+
+We will be using github pages to host our project. The deploy script is already setup for you so all you have to do now is run `npm run deploy`. This will generate a production build and deploy it to a gh-pages branch in your github repo.
+
+If everything has worked so far you should be able to see your app running at `https://your-github-username.github.io/gobs-o-goblins/`
+
+## About this tutorial
+
+Code snippets will be presented in a way that tries to convey exactly what you should be adding to a file at what time. When you are expected to create a file scratch and enter code into it, it will be represented with standard Javascript code highlighting, like so:
 
 ```javascript
-const path = require("path");
-const { CleanWebpackPlugin } = require("clean-webpack-plugin");
-const HtmlWebpackPlugin = require("html-webpack-plugin");
-const GitRevisionPlugin = require("git-revision-webpack-plugin");
-const TerserPlugin = require("terser-webpack-plugin");
+import { Component } from "geotic";
 
-const gitRevisionPlugin = new GitRevisionPlugin();
-
-const mode = () => {
-  if (process.env.NODE_ENV === "development") {
-    return { mode: "development" };
-  }
-
-  if (process.env.NODE_ENV === "production") {
-    return { mode: "production" };
-  }
-
-  return {};
-};
-
-const devtool = () => {
-  if (process.env.NODE_ENV === "development") {
-    return { devtool: "inline-source-map" };
-  }
-
-  if (process.env.NODE_ENV === "production") {
-    return { devtool: "source-map" };
-  }
-
-  return {};
-};
-
-const devServer = () => {
-  if (process.env.NODE_ENV === "development") {
-    return {
-      devServer: {
-        contentBase: "./dist",
-        open: false,
-      },
-    };
-  }
-
-  return {};
-};
-
-module.exports = {
-  ...mode(),
-  ...devtool(),
-  ...devServer(),
-
-  optimization: {
-    minimize: true,
-    minimizer: [
-      new TerserPlugin({
-        terserOptions: {
-          // because it's jacking up my property names and breaking code && mangle.properties = false don't do shit
-          // probably related to babel class properties...
-          mangle: false,
-        },
-      }),
-    ],
-  },
-
-  entry: "./src/index.js",
-
-  plugins: [
-    new CleanWebpackPlugin({ cleanStaleWebpackAssets: false }),
-    new HtmlWebpackPlugin({
-      title: "Snail 6",
-      template: "index.html",
-      version: gitRevisionPlugin.commithash().slice(0, 7),
-    }),
-  ],
-  output: {
-    filename: "[name].[contenthash].js",
-    path: path.resolve(__dirname, "dist"),
-  },
-
-  module: {
-    rules: [
-      {
-        test: /\.(png|jpe?g|gif)$/i,
-        use: [
-          {
-            loader: "file-loader",
-          },
-        ],
-      },
-      {
-        test: /\.m?js$/,
-        exclude: /(node_modules)\/(?!geotic)/,
-        use: {
-          loader: "babel-loader",
-          options: {
-            presets: ["@babel/preset-env"],
-            plugins: [
-              "@babel/plugin-proposal-class-properties",
-              "@babel/plugin-proposal-private-methods",
-            ],
-          },
-        },
-      },
-      {
-        test: /\.s[ac]ss$/i,
-        use: [
-          // Creates `style` nodes from JS strings
-          "style-loader",
-          // Translates CSS into CommonJS
-          "css-loader",
-          // Compiles Sass to CSS
-          "sass-loader",
-        ],
-      },
-    ],
-  },
-};
+export default class Health extends Component {
+  static properties = { current: 10 };
+}
 ```
+
+Most of the time, you’ll be editing a file and code that already exists. In such cases, the code will be displayed like this:
+
+```diff
+import { Component } from "geotic";
+
+export default class Health extends Component {
+-  static properties = { current: 10 };
++  static properties = { current: 10, max: 10 };
+}
+```
+
+## Ready to go?
+
+Once you’re set up and ready to go, you can proceed to Part 1.
