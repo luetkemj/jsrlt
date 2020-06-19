@@ -37,7 +37,11 @@ There are bunch of devDependencies we need to install before we can run the app.
 
 ### Dev
 
-This project uses a webpack development server with hot reloading. Run `npm start` to boot up the server. After a moment you should be able to access your project at [http://localhost:8080/](http://localhost:8080/). The server will reload the app automatically on save. To give it a try go ahead and make the following change in index.html:
+This project uses a webpack development server for local development. Run `npm start` to boot up the server. After a moment you should be able to access your project at [http://localhost:8080/](http://localhost:8080/).
+
+You should see "Hello World" and belo that "Build:" and some gibberish next to it. That gibberish is the current git hash. With that you can always pinpoint exactly what code is running. Very useful for debugging.
+
+The development server comes with hot reloading and will reload the app automatically on save. To give it a try go ahead and make the following change in index.html:
 
 ```diff
 - <p>Hello World</p>
@@ -46,16 +50,18 @@ This project uses a webpack development server with hot reloading. Run `npm star
 
 Save your changes and the browser will reload automatically. Cool!
 
-Don't forget to commit your changes to git.
+Don't forget to commit your changes to git. Stop the server with `control + c`
 
 ```bash
 git add .
 git commit -m 'my first commit'
 ```
 
+Start the server back up `npm start` and the git hash should have changed. Cool!
+
 ### Preprod
 
-Sometimes there are subtle differences between the raw code and what gets compiled for production. "It works on my machine" is a common developer excuse but it doesn't your fanbase any good. This project includes a preprod environment for testing your compiled code locally before deploying it to production.
+Sometimes there are subtle differences between the raw code and what gets compiled for production. "It works on my machine" is a common developer excuse but it doesn't do your fanbase any good. This project includes a preprod environment for testing your compiled code locally before deploying it to production.
 
 Run `npm run preprod` to create a production build and serve it locally. After the build is complete your browser should automatically open a new tab running the app. Go ahead and try it!
 
