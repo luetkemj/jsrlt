@@ -1,4 +1,4 @@
-# From scratch rewrite of the Complete Roguelike Tutorial in JS.
+# From scratch rewrite of the Complete Roguelike Tutorial in JS
 
 ![sgsO37A](https://user-images.githubusercontent.com/925980/85092017-69762e00-b1ae-11ea-8a2a-b4f0776bf728.png)
 
