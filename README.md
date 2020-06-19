@@ -8,6 +8,8 @@
 - Webpack
 - Free hosting on github pages
 
+## Tutorial
+
 - [x] [Part 0 - Setting Up](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part0.md)
 - [x] [Part 1 - Drawing the ‘@’ symbol and moving it around](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part1.md)
 - [ ] Part 2 - The generic Entity, the render functions, and the map
@@ -24,3 +26,5 @@
 - [ ] Part 13 - Gearing up
 
 [Repo of the tutorial project Gobs O' Goblins is available here.](https://github.com/luetkemj/gobs-o-goblins)
+
+[The complete roguelike tutorial on Reddit](https://www.reddit.com/r/roguelikedev/comments/grccvt/roguelikedev_does_the_complete_roguelike_tutorial/)
