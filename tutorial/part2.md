@@ -1,8 +1,8 @@
 # Part 2 - The generic Entity, the render functions, and the map
 
-For this tutorial we will be using an ECS architecture. A lot of folks will probably say this is overkill for the size of our project but I have found it to be the easiest architecture to reason about once games reach anything beyond basic complexity. If you choose to expand on this after the tutorial you'll have a decent base. We won't be writing our own ECS engine, we will instead be relying on the excellent [geotic](https://github.com/ddmills/geotic) for that. But before we install anything and start refactoring our game we should probably talk a bit about what an ECS architecture is and why you would choose to use one.
+For this tutorial we will be using an ECS architecture. A lot of folks will probably say this is overkill for the size of our project but I have found it to be the easiest architecture to reason about once games reach anything beyond basic complexity. If you choose to expand on this project after the tutorial you'll have a decent base to do so. We won't be writing our own ECS engine, we will instead be relying on the excellent [geotic](https://github.com/ddmills/geotic) for that. But before we install anything and start refactoring our game we should probably talk a bit about what an ECS architecture is and why you would choose to use one.
 
-To state the obvious, games are complicated! My first 4 or 5 experimented with all sorts of ways to manage state. Every one of those games started simple and eventually fell apart when adding new features became too complex.
+To state the obvious, games are complicated! My first 4 or 5 attempts experimented with all sorts of ways to manage state. Every one of those games started simple and eventually fell apart when adding new features became too complex.
 
 You shouldn't have to write complex code to do complex things. With ECS, complexity arises from simplicity. Follow a few simple rules; get complex behavior.
 
@@ -14,7 +14,7 @@ For a formal and rather dry definition we can turn to wikipedia:
 
 At it's core ECS is just a way to manage your application state. State is stored in components, entities are collections of those components, and systems run logic on those entities in order to add, remove, and mutate their components.
 
-As our game grows in scope I think you will find that these 3 simple rules will help to manage the underlying complexity leaving us to follow our inspiration and just make a game!
+As our game grows in scope I think you will find that these 3 simple rules will help to manage the underlying complexity of it all leaving us to follow our inspiration and just make a game!
 
 Enough talk, let's install geotic, create our first entity and learn how to do things the ECS way!
 
@@ -26,7 +26,7 @@ Before we get into it, go ahead and install geotic and start the engine.
 npm install geotic
 ```
 
-Next let's create a new folder `./src/state` and add a file to it `./src/state/ecs.js`. At the top of `ecs.js` we need to import the Engine from geotic and start it up.
+Next let's create a new folder `./src/state` and add a file called `ecs.js` at `./src/state/ecs.js`. Now we can import the Engine from geotic and start it up.
 
 ```javascript
 import { Engine } from "geotic";
@@ -36,11 +36,11 @@ const ecs = new Engine();
 export default ecs;
 ```
 
-Currently we store all of the state of our hero in the player object. To move around we directly mutate the postion values. Right now everything is very simple and easy to understand. Unfortunately This pattern won't scale very well if we were to add an NPC, a few monsters, maybe an item or two... mutating state directly like this very quickly becomes cumbersome, complicated, and prone to bugs that are hard to diagnose.
+Currently we store all of the state of our hero in the player object. To move around we directly mutate it's position values. Right now everything is very simple and easy to understand. Unfortunately this pattern won't scale very well if we were to add an NPC, a few monsters, maybe an item or two... mutating state directly like this very quickly becomes cumbersome, complicated, and prone to bugs that are hard to diagnose.
 
-We're going to refactor our game to do everything it already does - draw the @ symbol and move it around - the ECS way. At first it's going to seem like a lot of code. The benefit though is that as we add NPCs, monsters, items, the complexity of our code won't explode.
+We're going to refactor our game to do everything it already does - draw the @ symbol and move it around - the ECS way. At first it's going to seem like a lot of code. The benefit though is that as we add NPCs, monsters, and items, the complexity of our code won't explode.
 
-To start let's look at our player object:
+To start let's look at our player object and see how we can translate it to components:
 
 ```javascript
 const player = {
@@ -53,9 +53,9 @@ const player = {
 };
 ```
 
-It just stores the state of our player's appearance (char, color) and position. Remember, components are just generic objects to store bits of state. Let's go ahead then and make some generic components to store appearance and postion.
+Components are just containers used to store bits of state. Our player object is only concerned with two things so far, appearance (char, color) and position. Let's to compoenents to track these bits of state, Appearance and Position. A generic components we will be able to use them not just for our player but also for goblins, items, walls, anything we can see and pin to a specific location!
 
-First create a file to hold our components `./src/state/components.js`. In a larger application you may want to create individual files for each component but this is fine for our purposes.
+First create a file to hold our components called `components.js` at `./src/state/components.js`. In a larger application you may want to create individual files for each component but this is fine for our purposes.
 
 Make `./src/state/components.js` look like this:
 
@@ -87,56 +87,29 @@ const ecs = new Engine();
 +// all Components must be `registered` by the engine
 +ecs.registerComponent(Appearance);
 +ecs.registerComponent(Position);
-```
-
-We're ready to make our first Entity!
-
-Just below where we register our components in `./src/state/ecs.js` we can create an empty entity for our player.
-
-```javascript
-const player = ecs.createEntity();
-```
-
-Next we need to add components to our player.
-
-```javascript
-player.add(Appearance, { char: "@", color: "#fff" });
-player.add(Position);
-```
-
-The add method takes two arguments, a component, and a properties object to override any of the static defaults. You'll notice we don't pass a second argument when we add the Position component because the default properties are just fine.
-
-Finally, we need to export `ecs` so we can actually add it to our game. At this point `./src/state/ecs.js` should look like this:
-
-```javascript
-import { Engine } from "geotic";
-import { Appearance, Position } from "./components";
-
-const ecs = new Engine();
-
-// all Components must be `registered` by the engine
-ecs.registerComponent(Appearance);
-ecs.registerComponent(Position);
-
-const player = ecs.createEntity();
-
-player.add(Appearance, { char: "@" });
-player.add(Position);
 
 export default ecs;
 ```
 
-Ok let's add the engine to our game! In `./src/index.js` go ahead and import it like so:
+We're ready to make our first Entity!
+
+Just below where we register our components in `./src/state/ecs.js` we can create an empty entity for our player and then add our components to it.
 
 ```diff
-import "./lib/canvas.js";
-+import ecs from "./state/ecs";
-import { clearCanvas, drawChar } from "./lib/canvas";
+ecs.registerComponent(Position);
+
++const player = ecs.createEntity();
++player.add(Appearance, { char: "@", color: "#fff" });
++player.add(Position);
+
+export default ecs;
 ```
 
-Cool! We now have the (E)ntity and (C)omponent parts of ECS but what about the (S)ystem? We've seen how geotic provides classes for entities and components but it doesn't do that for systems. A system is just a function that iterates over a collection of entities. You can do whatever you want/need to in one but how you implement them is up to you.
+The add method takes two arguments, a component, and a properties object to override any of the static defaults. You'll notice we don't pass a second argument when we add the Position component because the default properties are just fine.
 
-Our first system will render our player entity to the screen. Let's make a new folder called system and a file inside it called render.js at `./src/systems/render.js`. We could have our systems iterate over every single entity at every tick but as you can imagine that's pretty inefficient. We can narrow the focus of our systems with geotic queries. A query is an always up to date set of entities that meet a required set of parameters.
+We now have the (E)ntity and (C)omponent parts of ECS but what about the (S)ystem? We've seen how geotic provides classes for entities and components but it doesn't do that for systems. A system is just a function that iterates over a collection of entities. You can do whatever you want/need to in one but how you implement it is entirely up to you.
+
+Our first system will render our player entity to the screen. Let's create a new folder `./src/systems` and add a file called `render.js` at `./src/systems/render.js`. We could have our systems iterate over every single entity in the game at every tick but as you can imagine that's gonna get pretty inefficient as we add more systems. We can instead narrow our focus with geotic queries. A query is an always up to date set of entities that have a specified set of components.
 
 Make `./src/systems/render.js` look like this:
 
@@ -149,7 +122,7 @@ const renderableEntities = ecs.createQuery({
 });
 ```
 
-`renderableEntities` will keep track of all entities that contain both the Position _and_ Appearance components. Let's use this query to loop through all renderableEntities and log the result to our javascript console. Go ahead and add the actual system at the end `./src/systems/render.js`.
+`renderableEntities` will keep track of all entities that contain both the Position _and_ Appearance components. Let's use this query to loop through all renderableEntities and log the result to our javascript console. Go ahead and add the actual system at the end of `./src/systems/render.js`.
 
 ```javascript
 export const render = () => {
@@ -159,7 +132,7 @@ export const render = () => {
 };
 ```
 
-Next we need to call our render system. At the top of `./src/index.js` import the system like this:
+Next we need to actually call our render system. At the top of `./src/index.js` import the system like this:
 
 ```diff
 import { clearCanvas, drawChar } from "./lib/canvas";
@@ -181,7 +154,7 @@ Start the game with `npm start` if it's not already running and open up your bro
 
 Now that our ECS engine is firing on all cylinders it's time to finally make it do something useful. Let's make our render system actually render!
 
-Instead of logging each enity from the render system we can use our drawChar function to draw them instead. We need to add a few things to `./src/systems/render.js` to do that.
+Instead of logging each entity from the system we can use our drawChar function to draw them instead. We need to add a few things to `./src/systems/render.js` to do that.
 
 ```diff
 import ecs from "../state/ecs";
@@ -193,6 +166,8 @@ const renderableEntities = ecs.createQuery({
 });
 
 export const render = () => {
++  clearCanvas()
++
   renderableEntities.get().forEach((entity) => {
 -    console.log(entity);
 +    const { appearance, position } = entity;
@@ -250,11 +225,11 @@ const processUserInput = () => {
 
 ```
 
-Ok - if we try to run the game now we should see our @ symbol in the top left but no longer moves. That and the javascriopt console will be lit up with errors. We deleted our player object but still reference it in processUserInput. We need to think about how to process user input the ECS way.
+Ok - if we try to run the game now we should see our @ symbol in the top left but it no longer moves. If you look in the javascriopt console, you'll see it's lit up with errors. We deleted our player object but still reference it in processUserInput. We need to think about how to process user input the ECS way.
 
-Moving an entity from one position to another is fraught with peril. What if there is a wall, or a trap, or a monster, or the entity is paralyzed, or mind controlled... What we would like to have is a generic way to let the system know where we intend to move an entity, and then let the system resolve what actually happens. Maybe they step on a trap, or bump attack a monster, or hit their nose on a wall, or somehow actually succeed. To do this we will be adding an additional component and system.
+Moving an entity from one position to another is fraught with peril. What if there is a wall, or a trap, or a monster, or the entity is paralyzed, or mind controlled... What we would like to have is a generic way to let our game know where an entity intends to move, and then let the our game resolve what actually happens. To do this we will be adding an additional component and system.
 
-Lets start with the component. Add another component to `./src/state/components`. The order here doesn't really matter, I just like to keep them in alphabetical order. :P
+Lets start by adding another component to `./src/state/components`. The order here doesn't really matter, I just like to keep them in alphabetical. :P
 
 ```diff
 import { Component } from "geotic";
@@ -298,7 +273,7 @@ player.add(Position);
 export default ecs;
 ```
 
-Alright! Now we need to add this component to the player entity in processUserInput. To do that we need to export the player entity from './src/state/ecs`
+Alright! Now we need to add this component to the player entity in processUserInput. To do that we first need to export the player entity from './src/state/ecs`
 
 ```diff
 ecs.registerComponent(Position);
@@ -348,9 +323,9 @@ const processUserInput = () => {
 };
 ```
 
-Almost there - we just need add our system. Create a new file called movement.js at `./src/systems/movement.js`. It should look like this:
+Almost there - we just need add our system. Create a new file called `movement.js` at `./src/systems/movement.js`. It should look like this:
 
-```
+```javascript
 import ecs from "../state/ecs";
 import { Move } from "../state/components";
 
@@ -379,10 +354,10 @@ The last thing we have to do is import our movement system and call it in './src
 
 ```diff
 import "./lib/canvas.js";
-import { movement } from "./systems/movement";
++import { movement } from "./systems/movement";
 import { render } from "./systems/render";
 import { player } from "./state/ecs";
-+import { Move } from "./state/components";
+import { Move } from "./state/components";
 
 render();
 
@@ -416,8 +391,8 @@ const processUserInput = () => {
 };
 ```
 
-Holy cow that was a lot - but we should finally be right back where we started! Your @ can move again!
+We're finally right back where we started! Your @ can move again!
 
 ---
 
-That was a lot to get through for the same result I know, but it'll be worth in the end. We have one more thing to do before we're done with part 2 of the tutorial. We need a map to walk on. This will be fun because we'll get to actually flex our systems a bit and use all that work we just did!
+OK, that was a lot to get through for the same result I know, but it'll be worth in the end. We have one more thing to do before we're done with part 2. We need a map to walk on. This will be fun because we'll get to actually flex our systems a bit and use all that work we just did!
