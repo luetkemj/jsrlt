@@ -397,9 +397,9 @@ We're finally right back where we started! Your @ can move again!
 
 OK, that was a lot to get through for the same result I know, but it'll be worth in the end. We have one more thing to do before we're done with part 2. We need a map to walk on. This will be fun because we'll get to actually flex our systems a bit and use all that work we just did!
 
-To start let's create another file in `./src/lib` called `grid.js` at `./src/lib/grid.js`. It going to contain a bunch of utility functions for dealing with math on a square grid. Most of the functions here are javascript implementations based on the pseudocode from [redblobgames](https://www.redblobgames.com/). I'm not going to go over the logic in any of this file. If you're curious how these functions work I highly encourage you to read the articles on redblobgames. I owe a great debt to the shared knowledge over there. Seriously. Everything I know about how to work with grids is from that site. I never got past algebraic math in school, yet I can understand and implement the work on redblobgames.
+To start let's create another file in `./src/lib` called `grid.js` at `./src/lib/grid.js`. It going to contain a bunch of utility functions for dealing with math on a square grid. Most of the functions here are javascript implementations based on the pseudocode from [redblobgames](https://www.redblobgames.com/). I'm not going to go over any of the logic in this file. If you're curious how these functions work I highly encourage you to read the articles on redblobgames. In fact, just bookmark it now. **It is an amazing resource**.
 
-Go ahead and just paste this into `./src/lib/grid.js`:
+OK, go ahead and just paste this into `./src/lib/grid.js`:
 
 ```javascript
 import { grid } from "../lib/canvas";
@@ -626,7 +626,23 @@ export const getDirection = (a, b) => {
 
 Now that that's out of the way let's make a big rectangle to walk around on.
 
-Create another file called `dungeon.js` in our lib folder at `./src/lib/dungeon.js` and make it look like this:
+First add some dimensions for our map to the grid config in `./src/lib/canvas.js`
+
+```diff
+export const grid = {
+  width: 100,
+  height: 34,
++
++  map: {
++    width: 79,
++    height: 29,
++    x: 21,
++    y: 3,
++  },
+};
+```
+
+Now create another file called `dungeon.js` in our lib folder at `./src/lib/dungeon.js` and make it look like this:
 
 ```javascript
 import ecs from "../state/ecs";
@@ -647,11 +663,57 @@ export const createDungeon = () => {
 };
 ```
 
-This createDungeon function will eventually do just that but for now we'll take what we can get. To start, the rectangle function from our grid library generates all the tile locations for our "dungeon". We then create an entity for each tile and add Appearance and Position components. If you check out our game now you should see a large grid of dots!
+This createDungeon function will eventually create a dungeon but for now we'll take what we can get.
 
-Notice we didn't have to think about rendering anything - our render system took care of it for us because each tile has the required components in the renderableEntities query. Cool!
+To start, we use the rectangle function from our grid library.
 
-One problem you may notice is that nothing stops you from walking off the edge of the map. We handle that in our movement system. We just need to make a quick check that the goal location from an entities move component is within our map's boundaries. Go ahead and make the following changes to `./src/systems/movement`
+```javascript
+const dungeon = rectangle(grid.map);
+```
+
+It generates a bunch of different stuff to kick off the start of our dungeon but among them is an object containing all the tile locations. That object is at `dungeon.tiles` and looks something like this:
+
+```javascript
+{
+  '0,0': {x:0, y:0},
+  '0,1': {x:0, y:1},
+  '0,2': {x:0, y:2}
+}
+```
+
+Next we use the builtin Object.keys method to iterate over the object and create an entity with Appearance and Position components for every single tile.
+
+```javascript
+Object.keys(dungeon.tiles).forEach((key) => {
+  const tile = ecs.createEntity();
+  tile.add(Appearance, { char: "•", color: "#555" });
+  tile.add(Position, dungeon.tiles[key]);
+});
+```
+
+Finally we need to call createDungeon as the game initializes. In `./src/index.js` make these changes right at the top.
+
+```diff
+import "./lib/canvas.js";
++import { createDungeon } from "./lib/dungeon";
+import { movement } from "./systems/movement";
+import { render } from "./systems/render";
+import { player } from "./state/ecs";
+import { Move } from "./state/components";
+
++// init game map and player position
++const dungeon = createDungeon();
++player.position.x = dungeon.center.x;
++player.position.y = dungeon.center.y;
++
+render();
+```
+
+See how we create the "dungeon", then use the center location to set our player's intital starting position.
+
+If you check out the game now you should see a large grid of dots. Notice how you didn't have to do anything extra to render those dots - the render system took care of it for you because each tile has the required components in the renderableEntities query. Cool!
+
+One problem you may notice is that nothing stops the player from walking right off the edge of the map. We can handle that in our movement system. We just need to make a quick check that the goal location from an entities move component is within our map's boundaries. Go ahead and make the following changes to `./src/systems/movement`
 
 ```diff
 import ecs from "../state/ecs";
@@ -682,7 +744,9 @@ export const movement = () => {
 };
 ```
 
-Congratulations for making it this far! That was a lot to get through.
+Try the game again - there is now an invisible boundary at the edge of the map!
+
+Good job and congratulations for making it this far! That was a lot to get through.
 
 In part 2 we learned what an ECS architecture is and why you might choose to use one. We created our first components, entities, and systems to render an "@" on the dungeon floor and move it around!
 
