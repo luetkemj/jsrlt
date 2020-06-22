@@ -396,3 +396,296 @@ We're finally right back where we started! Your @ can move again!
 ---
 
 OK, that was a lot to get through for the same result I know, but it'll be worth in the end. We have one more thing to do before we're done with part 2. We need a map to walk on. This will be fun because we'll get to actually flex our systems a bit and use all that work we just did!
+
+To start let's create another file in `./src/lib` called `grid.js` at `./src/lib/grid.js`. It going to contain a bunch of utility functions for dealing with math on a square grid. Most of the functions here are javascript implementations based on the pseudocode from [redblobgames](https://www.redblobgames.com/). I'm not going to go over the logic in any of this file. If you're curious how these functions work I highly encourage you to read the articles on redblobgames. I owe a great debt to the shared knowledge over there. Seriously. Everything I know about how to work with grids is from that site. I never got past algebraic math in school, yet I can understand and implement the work on redblobgames.
+
+Go ahead and just paste this into `./src/lib/grid.js`:
+
+```javascript
+import { grid } from "../lib/canvas";
+import { sample } from "lodash";
+
+export const CARDINAL = [
+  { x: 0, y: -1 }, // N
+  { x: 1, y: 0 }, // E
+  { x: 0, y: 1 }, // S
+  { x: -1, y: 0 }, // W
+];
+
+export const DIAGONAL = [
+  { x: 1, y: -1 }, // NE
+  { x: 1, y: 1 }, // SE
+  { x: -1, y: 1 }, // SW
+  { x: -1, y: -1 }, // NW
+];
+
+export const ALL = [...CARDINAL, ...DIAGONAL];
+
+export const toCell = (cellOrId) => {
+  let cell = cellOrId;
+  if (typeof cell === "string") cell = idToCell(cell);
+
+  return cell;
+};
+
+export const toLocId = (cellOrId) => {
+  let locId = cellOrId;
+  if (typeof locId !== "string") locId = cellToId(locId);
+
+  return locId;
+};
+
+const insideCircle = (center, tile, radius) => {
+  const dx = center.x - tile.x;
+  const dy = center.y - tile.y;
+  const distance_squared = dx * dx + dy * dy;
+  return distance_squared <= radius * radius;
+};
+
+export const circle = (center, radius) => {
+  const diameter = radius % 1 ? radius * 2 : radius * 2 + 1;
+  const top = center.y - radius;
+  const bottom = center.y + radius;
+  const left = center.x - radius;
+  const right = center.x + radius;
+
+  const locsIds = [];
+
+  for (let y = top; y <= bottom; y++) {
+    for (let x = left; x <= right; x++) {
+      const cx = Math.ceil(x);
+      const cy = Math.ceil(y);
+      if (insideCircle(center, { x: cx, y: cy }, radius)) {
+        locsIds.push(`${cx},${cy}`);
+      }
+    }
+  }
+
+  return locsIds;
+};
+
+export const rectangle = ({ x, y, width, height, hasWalls }, tileProps) => {
+  const tiles = {};
+
+  const x1 = x;
+  const x2 = x + width;
+  const y1 = y;
+  const y2 = y + height;
+
+  if (hasWalls) {
+    for (let yi = y1 + 1; yi < y2 - 1; yi++) {
+      for (let xi = x1 + 1; xi < x2 - 1; xi++) {
+        tiles[`${xi},${yi}`] = { x: xi, y: yi, ...tileProps };
+      }
+    }
+  } else {
+    for (let yi = y1; yi < y2; yi++) {
+      for (let xi = x1; xi < x2; xi++) {
+        tiles[`${xi},${yi}`] = { x: xi, y: yi, ...tileProps };
+      }
+    }
+  }
+
+  const center = {
+    x: Math.round((x1 + x2) / 2),
+    y: Math.round((y1 + y2) / 2),
+  };
+
+  return { x1, x2, y1, y2, center, hasWalls, tiles };
+};
+
+export const rectsIntersect = (rect1, rect2) => {
+  return (
+    rect1.x1 <= rect2.x2 &&
+    rect1.x2 >= rect2.x1 &&
+    rect1.y1 <= rect2.y2 &&
+    rect1.y2 >= rect2.y1
+  );
+};
+
+export const distance = (cell1, cell2) => {
+  const x = Math.pow(cell2.x - cell1.x, 2);
+  const y = Math.pow(cell2.y - cell1.y, 2);
+  return Math.floor(Math.sqrt(x + y));
+};
+
+export const idToCell = (id) => {
+  const coords = id.split(",");
+  return { x: parseInt(coords[0], 10), y: parseInt(coords[1], 10) };
+};
+
+export const cellToId = ({ x, y }) => `${x},${y}`;
+
+export const isOnMapEdge = (x, y) => {
+  const { width, height, x: mapX, y: mapY } = grid.map;
+
+  if (x === mapX) return true; // west edge
+  if (y === mapY) return true; // north edge
+  if (x === mapX + width - 1) return true; // east edge
+  if (y === mapY + height - 1) return true; // south edge
+  return false;
+};
+
+export const getNeighbors = ({ x, y }, direction = CARDINAL) => {
+  const points = [];
+  for (let dir of direction) {
+    let candidate = {
+      x: x + dir.x,
+      y: y + dir.y,
+    };
+    if (
+      candidate.x >= 0 &&
+      candidate.x < grid.width &&
+      candidate.y >= 0 &&
+      candidate.y < grid.height
+    ) {
+      points.push(candidate);
+    }
+  }
+  return points;
+};
+
+export const getNeighborIds = (cellOrId, direction = "CARDINAL") => {
+  let cell = toCell(cellOrId);
+
+  if (direction === "CARDINAL") {
+    return getNeighbors(cell, CARDINAL).map(cellToId);
+  }
+
+  if (direction === "DIAGONAL") {
+    return getNeighbors(cell, DIAGONAL).map(cellToId);
+  }
+
+  if (direction === "ALL") {
+    return [
+      ...getNeighbors(cell, CARDINAL).map(cellToId),
+      ...getNeighbors(cell, DIAGONAL).map(cellToId),
+    ];
+  }
+};
+
+export const isNeighbor = (a, b) => {
+  let posA = a;
+  if (typeof posA === "string") {
+    posA = idToCell(a);
+  }
+
+  let posB = b;
+  if (typeof posB === "string") {
+    posB = idToCell(b);
+  }
+
+  const { x: ax, y: ay } = posA;
+  const { x: bx, y: by } = posB;
+
+  if (
+    (ax - bx === 1 && ay - by === 0) ||
+    (ax - bx === 0 && ay - by === -1) ||
+    (ax - bx === -1 && ay - by === 0) ||
+    (ax - bx === 0 && ay - by === 1)
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
+export const randomNeighbor = (startX, startY) => {
+  const direction = sample(CARDINAL);
+  const x = startX + direction.x;
+  const y = startY + direction.y;
+  return { x, y };
+};
+
+export const getNeighbor = (x, y, dir) => {
+  const dirMap = { N: 0, E: 1, S: 2, W: 3 };
+  const direction = CARDINAL[dirMap[dir]];
+  return {
+    x: x + direction.x,
+    y: y + direction.y,
+  };
+};
+
+export const getDirection = (a, b) => {
+  const cellA = toCell(a);
+  const cellB = toCell(b);
+
+  const { x: ax, y: ay } = cellA;
+  const { x: bx, y: by } = cellB;
+
+  let dir;
+
+  if (ax - bx === 1 && ay - by === 0) dir = "→";
+  if (ax - bx === 0 && ay - by === -1) dir = "↑";
+  if (ax - bx === -1 && ay - by === 0) dir = "←";
+  if (ax - bx === 0 && ay - by === 1) dir = "↓";
+
+  return dir;
+};
+```
+
+Now that that's out of the way let's make a big rectangle to walk around on.
+
+Create another file called `dungeon.js` in our lib folder at `./src/lib/dungeon.js` and make it look like this:
+
+```javascript
+import ecs from "../state/ecs";
+import { rectangle } from "./grid";
+import { grid } from "./canvas";
+
+import { Appearance, Position } from "../state/components";
+
+export const createDungeon = () => {
+  const dungeon = rectangle(grid.map);
+  Object.keys(dungeon.tiles).forEach((key) => {
+    const tile = ecs.createEntity();
+    tile.add(Appearance, { char: "•", color: "#555" });
+    tile.add(Position, dungeon.tiles[key]);
+  });
+
+  return dungeon;
+};
+```
+
+This createDungeon function will eventually do just that but for now we'll take what we can get. To start, the rectangle function from our grid library generates all the tile locations for our "dungeon". We then create an entity for each tile and add Appearance and Position components. If you check out our game now you should see a large grid of dots!
+
+Notice we didn't have to think about rendering anything - our render system took care of it for us because each tile has the required components in the renderableEntities query. Cool!
+
+One problem you may notice is that nothing stops you from walking off the edge of the map. We handle that in our movement system. We just need to make a quick check that the goal location from an entities move component is within our map's boundaries. Go ahead and make the following changes to `./src/systems/movement`
+
+```diff
+import ecs from "../state/ecs";
++import { grid } from "../lib/canvas";
+import { Move } from "../state/components";
+
+const movableEntities = ecs.createQuery({
+  all: [Move],
+});
+
+export const movement = () => {
+  movableEntities.get().forEach((entity) => {
+-    const mx = entity.position.x + entity.move.x;
+-    const my = entity.position.y + entity.move.y;
++    let mx = entity.position.x + entity.move.x;
++    let my = entity.position.y + entity.move.y;
+
+    // this is where we will run any checks to see if entity can move to new location
++    // observe map boundaries
++    mx = Math.min(grid.map.width + grid.map.x - 1, Math.max(21, mx));
++    my = Math.min(grid.map.height + grid.map.y - 1, Math.max(3, my));
+
+    entity.position.x = mx;
+    entity.position.y = my;
+
+    entity.remove(Move);
+  });
+};
+```
+
+Congratulations for making it this far! That was a lot to get through.
+
+In part 2 we learned what an ECS architecture is and why you might choose to use one. We created our first components, entities, and systems to render an "@" on the dungeon floor and move it around!
+
+In part 3 we'll revisit createDungeon and build an actual environment to walk around in.
+
+See you there!
