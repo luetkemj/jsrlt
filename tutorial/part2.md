@@ -177,8 +177,247 @@ Then at the end of the file we can call it like this:
 };
 ```
 
-Start the game with `npm start` if it's not already running and open up your browser's javascript console. Now every time you kit a key you should see all renderableEntities logged to the console. There's only one so far but I like to do this to prove that things are working as I expect them to.
+Start the game with `npm start` if it's not already running and open up your browser's javascript console. Now every time you hit a key you should see all renderable entities logged to the console. There's only the one so far but this sort of thing is a good habit to get into just to prove that things are working as expected.
 
-The javascript console is the first place to look when things aren't working properly. Errors, warnings and other information will appear here.
+Now that our ECS engine is firing on all cylinders it's time to finally make it do something useful. Let's make our render system actually render!
 
-Now that we have all the parts of ECS setup, lets make them do something useful and actually draw the "@" symbol to the screen.
+Instead of logging each enity from the render system we can use our drawChar function to draw them instead. We need to add a few things to `./src/systems/render.js` to do that.
+
+```diff
+import ecs from "../state/ecs";
+import { Appearance, Position } from "../state/components";
++import { clearCanvas, drawChar } from "../lib/canvas";
+
+const renderableEntities = ecs.createQuery({
+  all: [Position, Appearance],
+});
+
+export const render = () => {
+  renderableEntities.get().forEach((entity) => {
+-    console.log(entity);
++    const { appearance, position } = entity;
++    const { char, color } = appearance;
+
++    drawChar({ char, color, position });
+  });
+};
+```
+
+Next we can go clean up a couple things in `./src/index.js`. We can remove the player object now that we have are storing the player as an entity. And we also don't need to call drawChar or clearCanvas anymore.
+
+```diff
+import "./lib/canvas.js";
+-import { clearCanvas, drawChar } from "./lib/canvas";
+import { render } from "./systems/render";
+
+-const player = {
+-  char: "@",
+-  color: "white",
+-  position: {
+-    x: 0,
+-    y: 0,
+-  },
+-};
+
+-drawChar(player);
++render();
+
+let userInput = null;
+
+document.addEventListener("keydown", (ev) => {
+  userInput = ev.key;
+  processUserInput();
+});
+
+const processUserInput = () => {
+  if (userInput === "ArrowUp") {
+    player.position.y -= 1;
+  }
+  if (userInput === "ArrowRight") {
+    player.position.x += 1;
+  }
+  if (userInput === "ArrowDown") {
+    player.position.y += 1;
+  }
+  if (userInput === "ArrowLeft") {
+    player.position.x -= 1;
+  }
+
+- clearCanvas();
+- drawChar(player);
+  render();
+};
+
+```
+
+Ok - if we try to run the game now we should see our @ symbol in the top left but no longer moves. That and the javascriopt console will be lit up with errors. We deleted our player object but still reference it in processUserInput. We need to think about how to process user input the ECS way.
+
+Moving an entity from one position to another is fraught with peril. What if there is a wall, or a trap, or a monster, or the entity is paralyzed, or mind controlled... What we would like to have is a generic way to let the system know where we intend to move an entity, and then let the system resolve what actually happens. Maybe they step on a trap, or bump attack a monster, or hit their nose on a wall, or somehow actually succeed. To do this we will be adding an additional component and system.
+
+Lets start with the component. Add another component to `./src/state/components`. The order here doesn't really matter, I just like to keep them in alphabetical order. :P
+
+```diff
+import { Component } from "geotic";
+
+export class Appearance extends Component {
+  static properties = {
+    color: "#ff0077",
+    char: "?",
+  };
+}
+
++export class Move extends Component {
++  static properties = { x: 0, y: 0 }
++}
+
+export class Position extends Component {
+  static properties = { x: 0, y: 0 };
+}
+
+```
+
+Don't forget to register it in `./src/state/ecs`!
+
+```diff
+import { Engine } from "geotic";
+-import { Appearance, Position } from "./components";
++import { Appearance, Move, Position } from "./components";
+
+const ecs = new Engine();
+
+// all Components must be `registered` by the engine
+ecs.registerComponent(Appearance);
++ecs.registerComponent(Move);
+ecs.registerComponent(Position);
+
+const player = ecs.createEntity();
+
+player.add(Appearance, { char: "@", color: "#fff" });
+player.add(Position);
+
+export default ecs;
+```
+
+Alright! Now we need to add this component to the player entity in processUserInput. To do that we need to export the player entity from './src/state/ecs`
+
+```diff
+ecs.registerComponent(Position);
+
+-const player = ecs.createEntity();
++export const player = ecs.createEntity();
+
+player.add(Appearance, { char: "@", color: "#fff" });
+```
+
+Now instead of directly manipulating the player entity we will add a Move component to it and handle the logic of actually moving in a system. Make these changes to `./src/index.js`.
+
+```diff
+import "./lib/canvas.js";
+import { render } from "./systems/render";
++import { player } from "./state/ecs";
++import { Move } from "./state/components";
+
+render();
+
+let userInput = null;
+
+document.addEventListener("keydown", (ev) => {
+  userInput = ev.key;
+  processUserInput();
+});
+
+const processUserInput = () => {
+  if (userInput === "ArrowUp") {
+-    player.position.y -= 1;
++    player.add(Move, { x: 0, y: -1 });
+  }
+  if (userInput === "ArrowRight") {
+-    player.position.x += 1;
++    player.add(Move, { x: 1, y: 0 });
+  }
+  if (userInput === "ArrowDown") {
+-    player.position.y += 1;
++    player.add(Move, { x: 0, y: 1 });
+  }
+  if (userInput === "ArrowLeft") {
+-    player.position.x -= 1;
++    player.add(Move, { x: -1, y: 0 });
+  }
+
+  render();
+};
+```
+
+Almost there - we just need add our system. Create a new file called movement.js at `./src/systems/movement.js`. It should look like this:
+
+```
+import ecs from "../state/ecs";
+import { Move } from "../state/components";
+
+const movableEntities = ecs.createQuery({
+  all: [Move],
+});
+
+export const movement = () => {
+  movableEntities.get().forEach((entity) => {
+    const mx = entity.position.x + entity.move.x;
+    const my = entity.position.y + entity.move.y;
+
+    // this is where we will run any checks to see if entity can move to new location
+
+    entity.position.x = mx;
+    entity.position.y = my;
+
+    entity.remove(Move);
+  });
+};
+```
+
+Just like in our render system we create a query at the top so we only have to loop over entities that actually intend to move. We then calculate the actual position the entity is trying to enter and update the entity with that new position. You can see where we will eventually check for walls, traps, monsters, whatever.
+
+The last thing we have to do is import our movement system and call it in './src/index.js'
+
+```diff
+import "./lib/canvas.js";
+import { movement } from "./systems/movement";
+import { render } from "./systems/render";
+import { player } from "./state/ecs";
++import { Move } from "./state/components";
+
+render();
+
+let userInput = null;
+
+document.addEventListener("keydown", (ev) => {
+  userInput = ev.key;
+  processUserInput();
+});
+
+const processUserInput = () => {
+  if (userInput === "ArrowUp") {
+    // player.position.y -= 1;
+    player.add(Move, { x: 0, y: -1 });
+  }
+  if (userInput === "ArrowRight") {
+    // player.position.x += 1;
+    player.add(Move, { x: 1, y: 0 });
+  }
+  if (userInput === "ArrowDown") {
+    // player.position.y += 1;
+    player.add(Move, { x: 0, y: 1 });
+  }
+  if (userInput === "ArrowLeft") {
+    // player.position.x -= 1;
+    player.add(Move, { x: -1, y: 0 });
+  }
+
++  movement();
+  render();
+};
+```
+
+Holy cow that was a lot - but we should finally be right back where we started! Your @ can move again!
+
+---
+
+That was a lot to get through for the same result I know, but it'll be worth in the end. We have one more thing to do before we're done with part 2 of the tutorial. We need a map to walk on. This will be fun because we'll get to actually flex our systems a bit and use all that work we just did!
