@@ -291,4 +291,4 @@ Now we can import our new function to `./src/index.js` and call it before drawCh
 
 WooHoo! We did it! You should be proud of yourself, this is big step on our way towards making a real game. You have gained experience and leveled up!
 
-Go to [part 2](https://github.com/luetkemj/jsrlt/edit/master/tutorial/part1.md) where we do all again the ECS way!
+Go to [part 2](https://github.com/luetkemj/jsrlt/edit/master/tutorial/part2.md) where we do all again the ECS way!
