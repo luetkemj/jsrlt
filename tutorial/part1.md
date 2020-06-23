@@ -291,4 +291,4 @@ Now we can import our new function to `./src/index.js` and call it before drawCh
 
 WooHoo! We did it! You should be proud of yourself, this is big step on our way towards making a real game. You have gained experience and leveled up!
 
-Next we'll add a game loop and turns to our game.
+Next we'll be adding a game loop and turns to our game.
