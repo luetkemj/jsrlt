@@ -36,7 +36,7 @@ const ecs = new Engine();
 export default ecs;
 ```
 
-Currently we store all of the state of our hero in the player object. To move around we directly mutate it's position values. Right now everything is very simple and easy to understand. Unfortunately this pattern won't scale very well if we were to add an NPC, a few monsters, maybe an item or two... mutating state directly like this very quickly becomes cumbersome, complicated, and prone to bugs that are hard to diagnose.
+Currently we store all of the state of our hero in the player object. To move around we directly mutate it's position values. Right now everything is very simple and easy to understand. Unfortunately this pattern won't scale very well if we were to add an NPC, a few monsters, maybe an item or two... mutating state directly like this very quickly becomes cumbersome, complicated, and prone to bugs that are hard to diagnose. Not to mention saving and loading... as our game scales up we would have to figure out how to build and rebuild state for every single piece.
 
 We're going to refactor our game to do everything it already does - draw the @ symbol and move it around - the ECS way. At first it's going to seem like a lot of code. The benefit though is that as we add NPCs, monsters, and items, the complexity of our code won't explode.
 
