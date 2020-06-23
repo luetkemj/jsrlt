@@ -109,4 +109,4 @@ export default class Health extends Component {
 
 ## Ready to go?
 
-Once you’re set up and ready to go, you can proceed to [Part 1](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part0.md).
+Once you’re set up and ready to go, you can proceed to [Part 1](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part1.md).
