@@ -750,6 +750,6 @@ Good job and congratulations for making it this far! That was a lot to get throu
 
 In part 2 we learned what an ECS architecture is and why you might choose to use one. We created our first components, entities, and systems to render an "@" on the dungeon floor and move it around!
 
-In part 3 we'll revisit createDungeon and build an actual environment to walk around in.
+In [part 3](https://github.com/luetkemj/jsrlt/edit/master/tutorial/part3.md) we'll revisit createDungeon and build an actual environment to walk around in.
 
 See you there!
