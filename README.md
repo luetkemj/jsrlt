@@ -12,8 +12,8 @@
 
 - [x] [Part 0 - Setting Up](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part0.md)
 - [x] [Part 1 - Drawing the ‘@’ symbol and moving it around](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part1.md)
-- [x] [Part 2 - The generic Entity, the render functions, and the map](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part1.md)
-- [ ] Part 3 - Generating a dungeon
+- [x] [Part 2 - The generic Entity, the render functions, and the map](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part2.md)
+- [x] [Part 3 - Generating a dungeon](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part3.md)
 - [ ] Part 4 - Field of view
 - [ ] Part 5 - Placing enemies and kicking them (harmlessly)
 - [ ] Part 6 - Doing (and taking) some damage
