@@ -411,3 +411,103 @@ Then in `./src/index.js` set the player position to the center of the first room
 ```
 
 Simple enough! The @ will now always start in the center of a room.
+
+Ok, now for the slightly more challenging piece. In order to prevent our "@" from walking through walls we need to add a new component on wall entities and then test that no entity with a blocking component exists in the location we want to move to from our movement system.
+
+Let's start by adding another component to `./src/state/components`.
+
+```javascript
+export class IsBlocking extends Component {}
+```
+
+You will notice that this component doesn't have any properties like the others. We will only be checking if the component exists on an entity so we don't actually need any.
+
+As always, don't forget to register the component in `./src/state/ecs`
+
+```diff
+import { Engine } from "geotic";
+-import { Appearance, Move, Position } from "./components";
++import { Appearance, IsBlocking, Move, Position } from "./components";
+
+const ecs = new Engine();
+
+// all Components must be `registered` by the engine
+ecs.registerComponent(Appearance);
++ecs.registerComponent(IsBlocking);
+ecs.registerComponent(Move);
+ecs.registerComponent(Position);
+
+export const player = ecs.createEntity();
+player.add(Appearance, { char: "@", color: "#fff" });
+player.add(Position);
+
+export default ecs;
+```
+
+Now head back to `./src/lib/dungeon` and where we will add the `IsBlocking` component to our wall entities.
+
+First, import the component with the others:
+
+```diff
+-import { Appearance, Position } from "../state/components";
++import { Appearance, IsBlocking, Position } from "../state/components";
+```
+
+Then add it to wall entities
+
+```diff
+if (tile.sprite === "WALL") {
+  const entity = ecs.createEntity();
+  entity.add(Appearance, { char: "#", color: "#AAA" });
++  entity.add(IsBlocking);
+  entity.add(Position, dungeon.tiles[key]);
+}
+```
+
+Finally in movement we need to check if the location we want to move to has an entity with the blocking component. Right after the check to observe map boundaries and before we actually update position of our entity we can check for any other blocking entities.
+
+```diff
+    // this is where we will run any checks to see if entity can move to new location
+    // observe map boundaries
+    mx = Math.min(grid.map.width + grid.map.x - 1, Math.max(21, mx));
+    my = Math.min(grid.map.height + grid.map.y - 1, Math.max(3, my));
+
++    // check for blockers
++    const blockers = [];
++    for (const e of ecs.entities.all) {
++      if (e.position.x === mx && e.position.y === my && e.isBlocking) {
++        blockers.push(e);
++      }
++    }
++    if (blockers.length) {
++      entity.remove(Move);
++      return;
++    }
+
+    entity.position.x = mx;
+    entity.position.y = my;
+```
+
+All we're doing here is looping through all of the entities in the game testing for any that are both in the location we intend to move and contain the `IsBlocking` component. If we find any blockers they get added to the `blockers` array. Finally if any blockers were found we know we can't enter the new location and instead just remove the `Move` component and return.
+
+Typically I build an entitiesAtLocation cache that tracks entity ids at each location. It looks something like this:
+
+```javascript
+{
+  "0,0", ["entityid1"];
+  "0,1", ["entityid2", "entityid4"];
+  "0,2", ["entityid3"];
+}
+```
+
+This is a lot faster as we only have to test the entities that are actually in the location we want to enter. But it's usually a mistake to over optimize early so for now, we're fine. Feel free to revisit this later if you need/want to.
+
+---
+
+Phew! Another part complete - this was another big one, congratulations on making it this far!
+
+In part 3 we completed one of the most important and satisfying aspects of building a roguelike - procedural dungeon generation! You now have a basic algorithm ready to be expanded upon with newfound tools and knowledge. Have fun and make it your own!
+
+In part 4 we'll get to tackle another typical feature in roguelikes - Field of Vision!
+
+See you there!
