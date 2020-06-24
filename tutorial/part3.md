@@ -389,3 +389,25 @@ if you have a hard time visualizing everything that's going in the algorithm lik
 Dungeon generation is the favorite part of a lot of developers. This is a part of the codebase where you can get a lot bang for your buck. Subtle changes can make huge differences in the landscape and really change how your game plays. In the live version above I added a drunken walk mining algorithm to generate a 'natural cave' in the middle of an artificial dungeon. What would happen if you don't test for overlapping rooms? Or allow 100 rooms, or make them all huge? Can you figure our how to tweak our code to fill a room with water?
 
 There are so many possibilities here I almost forgot that our @ can still just walk wherever the heck it pleases. We have a little more work to do to make our dungeon 'playable'.
+
+To make our game playable we need to do two things. Place our @ in the center of one of the generated rooms and make our walls blocking.
+
+Let's got for the easy win and put our player in the center of one of the rooms.
+
+In `./src/lib/dungeon.js` add our accepts rooms array to our dungeon object like this:
+
+```diff
++  dungeon.rooms = rooms;
+  dungeon.tiles = { ...dungeon.tiles, ...roomTiles, ...passageTiles };
+```
+
+Then in `./src/index.js` set the player position to the center of the first room in that array like this:
+
+```diff
+-player.position.x = dungeon.center.x;
+-player.position.y = dungeon.center.y;
++player.position.x = dungeon.rooms[0].center.x;
++player.position.y = dungeon.rooms[0].center.y;
+```
+
+Simple enough! The @ will now always start in the center of a room.
