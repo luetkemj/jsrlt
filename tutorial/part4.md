@@ -205,11 +205,125 @@ We've removed the `renderableEntities` query in favor of queries for each layer.
 
 Our @ has returned to the dungeon and the floor properly is beneath it's feet!
 
-Nice work! We're starting to build a solid foundation for our game. We just have one more thing before we can add our "Field of View". Remember in the last tutorial where I talked about how we weren't going to add an `entitiesAtLocation` cache? I lied. We're totally going to add one. Right now. Don't worry, it's not hard - geotic has a couple tricks up it's sleeve to help us out :)
+Nice work! We're starting to build a solid foundation for our game. We just have one more thing before we can add our "Field of View". Remember in the last tutorial where I talked about how we weren't going to add an `entitiesAtLocation` cache? I lied. We're totally going to add one. Right now.
 
-catch up
-fix layers in render
-add cache for location tracking
+First let's add a new file to store our cache with a few helper functions for accessing it. Create a file in `./src/state` called `cache.js` at `./src/state/cache.js` and make it look like this:
+
+```javascript
+export const cache = {
+  entitiesAtLocation: {},
+};
+
+export const addCacheSet = (name, key, value) => {
+  if (cache[name][key]) {
+    cache[name][key].add(value);
+  } else {
+    cache[name][key] = new Set();
+    cache[name][key].add(value);
+  }
+};
+
+export const deleteCacheSet = (name, key, value) => {
+  if (cache[name][key] && cache[name][key].has(value)) {
+    cache[name][key].delete(value);
+  }
+};
+
+export const readCacheSet = (name, key, value) => {
+  if (cache[name][key]) {
+    if (value) {
+      return cache[name][key].get(value);
+    }
+
+    return cache[name][key];
+  }
+};
+
+export default cache;
+```
+
+We just set up an object to store our cache and create some helper functions for basic CRUD operations. Our entitiesAtLocation cache will be an object with locId keys. LocIds are just a stringified combination of the location x and y properities (e.g, '0,1'). The value at each key will be a [Set](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set) of entity ids. A Set has some advantages over an array in this case. Specifically it's easier to access specific values and it's faster.
+
+The purpose of this cache is to track what entities are in each location. So to start we should add entities to the cache if they have `Position` component. Geotic provides some lifecycle methods that can help with this. In our components file at `./src/state/components.js` we can add entities to the cache when the Position component is attached to an entity!
+
+```diff
+import { Component } from "geotic";
++import { addCacheSet } from "./cache";
+```
+
+```diff
+export class Position extends Component {
+  static properties = { x: 0, y: 0 };
+
++  onAttached() {
++    const locId = `${this.entity.position.x},${this.entity.position.y}`;
++    addCacheSet("entitiesAtLocation", locId, this.entity.id);
++  }
+}
+```
+
+Next we need to update our cache when an entity moves. The simplest way for us to do this right now is in our movement system at `./src/systems/movement.js`. After all the checks to determine if an entity is able to move and right before we update their position, we can update the cache like this:
+
+```diff
+import ecs from "../state/ecs";
++import { addCacheSet, deleteCacheSet } from "../state/cache";
+import { grid } from "../lib/canvas";
+import { Move } from "../state/components";
+```
+
+```diff
++deleteCacheSet(
++  "entitiesAtLocation",
++  `${entity.position.x},${entity.position.y}`,
++  entity.id
++);
++addCacheSet("entitiesAtLocation", `${mx},${my}`, entity.id);
+
+entity.position.x = mx;
+entity.position.y = my;
+```
+
+We simply delete the entity id at it's previous location in cache and add it to the new one.
+
+Ok, now that our cache is all set up, let's use it! Still in `./src/systems/movement.js` replace the current check for blockers:
+
+```javascript
+// check for blockers
+const blockers = [];
+for (const e of ecs.entities.all) {
+  if (e.position.x === mx && e.position.y === my && e.isBlocking) {
+    blockers.push(e);
+  }
+}
+if (blockers.length) {
+  entity.remove(Move);
+  return;
+}
+```
+
+With out new one that uses cache:
+
+```javascript
+const blockers = [];
+// read from cache
+const entitiesAtLoc = readCacheSet("entitiesAtLocation", `${mx},${my}`);
+
+for (const eId of entitiesAtLoc) {
+  if (ecs.getEntity(eId).isBlocking) {
+    blockers.push(eId);
+  }
+}
+if (blockers.length) {
+  entity.remove(Move);
+  return;
+}
+```
+
+The biggest change here is that we now only have to check the entities at our intended location if they are blocking. Previously we checked the location of every entity in the entire game to determine if it was both blocking AND in the place we wanted to go. This will become a common pattern ahead as we are going to need to know what entities are in a given location a lot moving forward.
+
+---
+
+We are all caught up and ready to add "Field of Vision"! We are going to be using my javascript implementation of an FOV algorithm I found online by Bob Nystrom (Munificent). He wrote the online roguelike [Hauberk](https://munificent.github.io/hauberk/) and a fantastic book called [Game Programming Patterns](http://gameprogrammingpatterns.com/). I'll be honest and say I don't remember exactly how this algorithm works. Hooking it up is the important bit for our purposes. If you want to understand it fully, there is an exhaustive [blog post about it here](http://journal.stuffwithstuff.com/2015/09/07/what-the-hero-sees/) where Bob explains far better than I could.
 
 fov code
 hookit up with geotic
