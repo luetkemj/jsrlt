@@ -246,9 +246,9 @@ export const readCacheSet = (name, key, value) => {
 export default cache;
 ```
 
-We just set up an object to store our cache and create some helper functions for basic CRUD operations. Our entitiesAtLocation cache will be an object with locId keys. LocIds are just a stringified combination of the location x and y properities (e.g, '0,1'). The value at each key will be a [Set](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set) of entity ids. A Set has some advantages over an array in this case. Specifically it's easier to access specific values and it's faster.
+We just set up an object to store our cache and create some helper functions for basic CRUD operations. Our entitiesAtLocation cache will be an object with locId keys. LocIds are just a stringified combination of the location x and y properities (e.g, '0,1'). The value at each key will be a [Set](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set) of entity ids. A Set has some advantages over an array in this case. Specifically we have a get method for simple access of values and it's super fast.
 
-The purpose of this cache is to track what entities are in each location. So to start we should add entities to the cache if they have `Position` component. Geotic provides some lifecycle methods that can help with this. In our components file at `./src/state/components.js` we can add entities to the cache when the Position component is attached to an entity!
+The purpose of this cache is to track what entities are in each location. So to start we should add entities to the cache when they get the `Position` component. Geotic provides some lifecycle methods that can help with this. In our components file at `./src/state/components.js` we can add entities to the cache when the Position component is attached to an entity!
 
 ```diff
 import { Component } from "geotic";
@@ -270,12 +270,17 @@ Next we need to update our cache when an entity moves. The simplest way for us t
 
 ```diff
 import ecs from "../state/ecs";
-+import { addCacheSet, deleteCacheSet } from "../state/cache";
++import { addCacheSet, deleteCacheSet, readCacheSet } from "../state/cache";
 import { grid } from "../lib/canvas";
 import { Move } from "../state/components";
 ```
 
 ```diff
+if (blockers.length) {
+  entity.remove(Move);
+  return;
+}
+
 +deleteCacheSet(
 +  "entitiesAtLocation",
 +  `${entity.position.x},${entity.position.y}`,
@@ -287,7 +292,7 @@ entity.position.x = mx;
 entity.position.y = my;
 ```
 
-We simply delete the entity id at it's previous location in cache and add it to the new one.
+We simply delete the entity id at it's previous location in cache and then add it to the new one.
 
 Ok, now that our cache is all set up, let's use it! Still in `./src/systems/movement.js` replace the current check for blockers:
 
@@ -305,7 +310,7 @@ if (blockers.length) {
 }
 ```
 
-With out new one that uses cache:
+With out new one that uses our cache:
 
 ```javascript
 const blockers = [];
@@ -323,7 +328,7 @@ if (blockers.length) {
 }
 ```
 
-The biggest change here is that we now only have to check the entities at our intended location if they are blocking. Previously we checked the location of every entity in the entire game to determine if it was both blocking AND in the place we wanted to go. This will become a common pattern ahead as we are going to need to know what entities are in a given location a lot moving forward.
+The biggest change here is that we now only check the entities at our intended location if they are blocking. Previously we checked the location of every entity in the entire game to determine if it was both blocking AND in the place we wanted to go. We're going to need this information quite a bit moving forward so it makes sense to just rip off the bandaid and implement the cache.
 
 ---
 
