@@ -451,7 +451,7 @@ export default function createFOV(
 }
 ```
 
-Now that we have our Field of Vision algorithm in place we need to wire it up. We'll start with the system this time. Create a new file, again called `fov.js` but this time the systems directory at `./src/systems/fov.js`. It should look like this:
+Now that we have our Field of Vision algorithm in place we need to wire it up. We'll start with the system this time. Create a new file, again called `fov.js` but this time in the systems directory at `./src/systems/fov.js`. It should look like this:
 
 ```javascript
 import { readCacheSet } from "../state/cache";
@@ -496,9 +496,7 @@ export const fov = () => {
 };
 ```
 
-You may notice the new components we imported at the top - we'll create those next. Let's go over what this system is doing first.
-
-The first thing the system does is gather some data to pass into `createFOV`. The last argument to createFOV is the visual range of our hero. Adjust accordingly.
+You may have noticed some new components we imported at the top - we'll create those next. But let's go over what this system is doing first. The first thing it does is gather some data to pass into `createFOV`. The last argument passing into createFOV is the visual range of our hero and the only one you may want to manually tweak.
 
 ```javascript
 export const fov = () => {
@@ -510,7 +508,9 @@ export const fov = () => {
   const FOV = createFOV(opaqueEntities, width, height, originX, originY, 10);
 ```
 
-Next remove the component `IsInFov` from all entities. This clears out all the state from the last turn ensuring that we always have the latest data. Our FOV algorithm returns an array of locations within our hero's field of view. We need to find all the entities at each location and add an IsInFov component. If an entity has never been revealed we will add an IsRevealed component as well. This is why we created a cache earlier. Having to iterate through every entity in the game for every tile in FOV every turn... ugh. That would be bad.
+Next the system removes the component `IsInFov` from all entities that prevuosly had it. This clears out all the state from the last turn ensuring that we always have the latest data.
+
+The algorithm returns an array of locations within our hero's field of view. We need to find all the entities at each location and add an `IsInFov` component. If an entity has never been revealed we will add an `IsRevealed` component as well. This is why we created a cache earlier. Having to iterate through every entity in the game for every tile in FOV every turn... ugh. That would be bad.
 
 ```javascript
   // clear out stale fov
@@ -571,3 +571,170 @@ ecs.registerComponent(Layer400);
 ecs.registerComponent(Move);
 ecs.registerComponent(Position);
 ```
+
+The fov algorithm needs to know what locations on the map are see through and what aren't. The `IsOpaque` component is the flag we're using to determine that. Let's add it to walls in `./src/lib/dungeon.js` now.
+
+```diff
+import {
+  Appearance,
+  IsBlocking,
++  IsOpaque,
+  Layer100,
+  Position,
+} from "../state/components";
+```
+
+```diff
+if (tile.sprite === "WALL") {
+  const entity = ecs.createEntity();
+  entity.add(Appearance, { char: "#", color: "#AAA" });
+  entity.add(IsBlocking);
++  entity.add(IsOpaque);
+  entity.add(Layer100);
+  entity.add(Position, dungeon.tiles[key]);
+}
+```
+
+We're getting close - we need to call our new fov system on each turn in `./src/index.js`. While we're in this file let's do quick refactor - rather than directly mutate player position to set the starting point let's just add the `Position` component in this file. This way we are no longer breaking a core tenant of ECS - don't mutate entity props directly outside of a system - and we ensure that our player's position will be correctly cached because we are adding the Position component with the correct x and y.
+
+Go ahead and make these changes:
+
+```diff
+import "./lib/canvas.js";
+import { grid } from "./lib/canvas";
+import { createDungeon } from "./lib/dungeon";
++import { fov } from "./systems/fov";
+import { movement } from "./systems/movement";
+import { render } from "./systems/render";
+import { player } from "./state/ecs";
+-import { Move } from "./state/components";
++import { Move, Position } from "./state/components";
+
+// init game map and player position
+const dungeon = createDungeon({
+  x: grid.map.x,
+  y: grid.map.y,
+  width: grid.map.width,
+  height: grid.map.height,
+});
+-player.position.x = dungeon.rooms[0].center.x;
+-player.position.y = dungeon.rooms[0].center.y;
++player.add(Position, {
++  x: dungeon.rooms[0].center.x,
++  y: dungeon.rooms[0].center.y,
++});
+
++fov();
+render();
+
+let userInput = null;
+
+document.addEventListener("keydown", (ev) => {
+  userInput = ev.key;
+  processUserInput();
+});
+
+const processUserInput = () => {
+  if (userInput === "ArrowUp") {
+    player.add(Move, { x: 0, y: -1 });
+  }
+  if (userInput === "ArrowRight") {
+    player.add(Move, { x: 1, y: 0 });
+  }
+  if (userInput === "ArrowDown") {
+    player.add(Move, { x: 0, y: 1 });
+  }
+  if (userInput === "ArrowLeft") {
+    player.add(Move, { x: -1, y: 0 });
+  }
+
+  movement();
++ fov();
+  render();
+};
+```
+
+Now that we're adding the Position component in index.js we can delete the line where we were doing it in `./src/state/ecs.js`:
+
+```diff
+export const player = ecs.createEntity();
+player.add(Appearance, { char: "@", color: "#fff" });
+-player.add(Position);
+player.add(Layer400);
+```
+
+We're on the home stretch! We just need a couple more edits to our render system. The queries need to know about `IsInFov` and `IsRevealed`. We will use another property in the queries, `any`. The any property will exclude any entity that does not have at least one of the specified components. So we now require that entities have all of `[Position, Appearance, Layer100]` and at least one of `[IsInFov, IsRevealed]`
+
+In `./src/systems/render.js` make the following changes:
+
+```diff
+import ecs from "../state/ecs";
+import {
+  Appearance,
++  IsInFov,
++  IsRevealed,
+  Position,
+  Layer100,
+  Layer300,
+```
+
+```diff
+const layer100Entities = ecs.createQuery({
+  all: [Position, Appearance, Layer100],
++  any: [IsInFov, IsRevealed],
+});
+
+const layer300Entities = ecs.createQuery({
+  all: [Position, Appearance, Layer300],
++  any: [IsInFov, IsRevealed],
+});
+
+const layer400Entities = ecs.createQuery({
+-  all: [Position, Appearance, Layer400],
++  all: [Position, Appearance, Layer400, IsInFov],
+});
+```
+
+Layer400 requires all entities have `IsInFov`. This layer will have monsters - and we only want monster locations to be revealed if they are actually in view.
+
+Go ahead and take a look at the game - cool huh? We could stop there but let's make one more improvement. Let's change the color of entities that have been revealed but are no longer FOV. We will use the options override in drawCell to do that. Go ahead and make the render function look like this:
+
+```javascript
+export const render = () => {
+  clearCanvas();
+
+  layer100Entities.get().forEach((entity) => {
+    if (entity.isInFov) {
+      drawCell(entity);
+    } else {
+      drawCell(entity, { color: "#333" });
+    }
+  });
+
+  layer300Entities.get().forEach((entity) => {
+    if (entity.isInFov) {
+      drawCell(entity);
+    } else {
+      drawCell(entity, { color: "#333" });
+    }
+  });
+
+  layer400Entities.get().forEach((entity) => {
+    if (entity.isInFov) {
+      drawCell(entity);
+    } else {
+      drawCell(entity, { color: "#100" });
+    }
+  });
+};
+```
+
+Very nice! Now the difference between tiles in our field of vision and those that we know about but can't currently see is obvious.
+
+---
+
+Wow, one more done!
+
+In part 4 we refactored our draw function to support backgrounds, introduced layers, and built a basic cache, all before implementing a major new feature - Field of Vision! You should be very proud of yourself for making it this far - the game is shaping up! Commit everything to github and deploy!
+
+In the step 5 we get to finally add some goblins and kick 'em around! See you there :)

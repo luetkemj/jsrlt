@@ -508,6 +508,6 @@ Phew! Another part complete - this was another big one, congratulations on makin
 
 In part 3 we completed one of the most important and satisfying aspects of building a roguelike - procedural dungeon generation! You now have a basic algorithm ready to be expanded upon with newfound tools and knowledge. Have fun and make it your own!
 
-In part 4 we'll get to tackle another typical feature in roguelikes - Field of Vision!
+In [part 4](https://github.com/luetkemj/jsrlt/edit/master/tutorial/part4.md) we'll get to tackle another typical feature in roguelikes - Field of Vision!
 
 See you there!
