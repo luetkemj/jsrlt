@@ -15,7 +15,7 @@
 - [x] [Part 2 - The generic Entity, the render functions, and the map](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part2.md)
 - [x] [Part 3 - Generating a dungeon](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part3.md)
 - [x] [part 4 - Field of view](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part4.md)
-- [ ] Part 5 - Placing enemies and kicking them (harmlessly)
+- [x] [Part 5 - Placing enemies and kicking them (harmlessly)]((https://github.com/luetkemj/jsrlt/blob/master/tutorial/part5.md))
 - [ ] Part 6 - Doing (and taking) some damage
 - [ ] Part 7 - Creating the Interface
 - [ ] Part 8 - Items and Inventory
