@@ -737,4 +737,4 @@ Wow, one more done!
 
 In part 4 we refactored our draw function to support backgrounds, introduced layers, and built a basic cache, all before implementing a major new feature - Field of Vision! You should be very proud of yourself for making it this far - the game is shaping up! Commit everything to github and deploy!
 
-In the step 5 we get to finally add some goblins and kick 'em around! See you there :)
+In the [step 5](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part5.md) we get to finally add some goblins and kick 'em around! See you there :)
