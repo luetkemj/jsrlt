@@ -2,9 +2,9 @@
 
 ## Prior Knowledge
 
-This tutorial assumes some basic familiarity with programming in general and Javascript in particular. There are many free resources online about learning programming and Javascript. I would recommend you spend some time getting a handle on the basics at least before proceeding. In additional to javascript you should be familiar with using the command line, git, and github.
+This tutorial assumes some basic familiarity with programming in general and Javascript in particular. There are many free resources online about learning programming and Javascript. I would recommend you spend some time getting a handle on the basics at minimum before proceeding. In addition to javascript you should be familiar with using the command line, git, and github.
 
-That said - who am I to tell you what to do? Feel free to ignore that last paragraph and carry on!
+That said - who am I to tell you what to do? Feel free to ignore that last paragraph and carry on! It's just typing right?
 
 ## Assumptions
 
