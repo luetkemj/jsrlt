@@ -544,4 +544,184 @@ const attack = (entity, target) => {
 
 Yeah! These dirty goblins don't stand a chance!!!
 
-Ok - this isn't really fair. They're completely defenseless. Let's actually give them a chance with some actual (albeit basic) AI!
+Ok - this isn't really fair. They're completely defenseless. Let's give them a chance with some actual (albeit basic) AI!
+
+Our ai only needs to be smart enough to path towards a target. We already handle bump attacks so if we can teach our goblins to path to the player they will attack on contact.
+
+For pathing to a target we will be using an [A\*](https://en.wikipedia.org/wiki/A*_search_algorithm) implementation from [Pathfinding.js](https://www.npmjs.com/package/pathfinding). Pathfinding.js includes an array of pathing algorithms that all have their own particular uses. You can explore them on your own in their [online demo](http://qiao.github.io/PathFinding.js/visual/).
+
+To start go ahead and install the library:
+
+```bash
+npm install pathfinding
+```
+
+There is a bit of setup required each time you want to calculate a path. The algorithm needs a matrix that describes all blocking and unblocking locations. Let's start by creating a file called `pathfinding.js` in our lib directory at `./src/lib/pathfinding.js`. This will export a function that will require and start and an end goal and return a path that we can use elsewhere.
+
+It should look like this:
+
+```javascript
+import PF from "pathfinding";
+import { some, times } from "lodash";
+import ecs from "../state/ecs";
+import cache, { readCacheSet } from "../state/cache";
+import { toCell } from "./grid";
+
+const baseMatrix = [];
+times(34, () => baseMatrix.push(new Array(100).fill(0)));
+
+export const aStar = (start, goal) => {
+  const matrix = [...baseMatrix];
+
+  const locIds = Object.keys(cache.entitiesAtLocation);
+
+  locIds.forEach((locId) => {
+    if (
+      some([...readCacheSet("entitiesAtLocation", locId)], (eId) => {
+        return ecs.getEntity(eId).isBlocking;
+      })
+    ) {
+      const cell = toCell(locId);
+
+      matrix[cell.y][cell.x] = 1;
+    }
+  });
+
+  matrix[start.y][start.x] = 0;
+  matrix[goal.y][goal.x] = 0;
+
+  const grid = new PF.Grid(matrix);
+  const finder = new PF.AStarFinder({
+    allowDiagonal: false,
+    dontCrossCorners: true,
+  });
+
+  const path = finder.findPath(start.x, start.y, goal.x, goal.y, grid);
+
+  return path;
+};
+```
+
+Now let's update our ai system so the goblins can actually path to the player instead of just pondering the meaning of life. In `./src/systems/ai.js` import our aStar lib that we just created.
+
+```diff
+import ecs from "../state/ecs";
+import { Ai, Description } from "../state/components";
++import { aStar } from "../lib/pathfinding";
+
+const aiEntities = ecs.createQuery({
+```
+
+Next add a moveToTarget function just after the aiEntities query.
+
+```javascript
+const moveToTarget = (entity, target) => {
+  const path = aStar(entity.position, target.position);
+  if (path.length) {
+    const newLoc = path[1];
+    entity.add("Move", { x: newLoc[0], y: newLoc[1], relative: false });
+  }
+};
+```
+
+This function takes an entity and a target and generates a path using aStar from the entity to the target. The path that is returned is inclusive - meaning it includes the beginning position and the target position. This is why we use `path[1]` as our new location. If we used `path[0]` our goblins would never move!
+
+Now we can just replace the console.log in our existing ai and replace it with a call to our new function moveToTarget.
+
+```diff
+-export const ai = () => {
++export const ai = (player) => {
+  aiEntities.get().forEach((entity) => {
+-    console.log(
+-      `${entity.description.name} ${entity.id} ponders it's existence.`
+-    );
++    if (entity.has("IsInFov")) {
++      moveToTarget(entity, player);
++    }
+  });
+};
+```
+
+You may have noticed we're now passing `player` into our ai. Eventually this should probably be stored in a target component on each entity - but for now our goblins really only have one concern so we can just pass in the player from `./src/index.js` like this:
+
+```diff
+if (!playerTurn) {
+-    ai();
++    ai(player);
+    movement();
+    fov(player);
+    render();
+```
+
+Go ahead and give it a shot! Not working? Yeah, there's a bug. Try and figure it out! Debugging is a big part of game development :)
+
+---
+
+Did you figure it out? It's ok if you didn't - this was a tricky one that took me a bit to figure out. It goes back to a decision we made in part 2. Our Move component expects a relative position. We take something like { x: 0, y: -1 } and add it to an entities current position to calculate the new position. But our path returns absolute positions - our goblins are trying to teleport into solid rock somewhere on our map and our movement system is failing back to "goblin bump into a wall". The simplest solution here is to modify our `Move` component and `movement` system to account for both. Let's add a flag in our Move component to let the system know what sort of position it's dealing with. In `./src/state/components.js` add a property called `relative` like this:
+
+```diff
+export class Move extends Component {
+-  static properties = { x: 0, y: 0 };
++  static properties = { x: 0, y: 0, relative: true };
+}
+```
+
+Now in our movement system `./src/movement.js` we just need to set mx and my to either a relative or absolute position:
+
+```diff
+export const movement = () => {
+  movableEntities.get().forEach((entity) => {
+-    let mx = entity.position.x + entity.move.x;
+-    let my = entity.position.y + entity.move.y;
++    let mx = entity.move.x;
++    let my = entity.move.y;
++
++    if (entity.move.relative) {
++      mx = entity.position.x + entity.move.x;
++      my = entity.position.y + entity.move.y;
++    }
+```
+
+Now our goblins should move straight for our @ and attack! Give it a try!
+
+Did you win? If not, you may have noticed another interesting bug. Did your @ turn into a goblin when it died? Sure looked that way to me - although it's not quite what's happening. Based on our code what really happens is after your @ dies the player takes control of a goblin riding the heros corpse around the dungeon like a skate board! For real - that's an honest interpretation of what our code is doing :)
+
+Rather than try and solve for what to do after the player dies in our code we can just end the game. To do that we will add an IsDead component that gets added to entities when they die. Then in our game loop we can just bail if the player is dead.
+
+In `./src/state/components.js` add an IsDead component:
+
+```javascript
+export class IsDead extends Component {}
+```
+
+Don't forget to register it in `./src/state/ecs.js`!
+
+Next in `./src/systems/movement.js` we just need to add the `IsDead` component to our kill function when an entity dies.
+
+```diff
+const kill = (entity) => {
+  entity.appearance.char = "%";
+  entity.remove("Ai");
+  entity.remove("IsBlocking");
++  entity.add("IsDead");
+  entity.remove("Layer400");
+  entity.add("Layer300");
+};
+```
+
+Finally, in our update function let's return early if the player is dead like this:
+
+```diff
+const update = () => {
++  if (player.isDead) {
++    return;
++  }
+
+  if (playerTurn && userInput) {
+```
+
+That's it! We now have slightly less stupid goblins that can actually fight back! We don't have to feel bad for fighting them anymore :)
+
+In part 6 we refactored our entities with prefabs, added tooling to inspect entities with the click of a mouse, implemented combat mechanics, and created an actual Ai for our goblins. Yeesh - that's a lot! Congrats, we're almost halfway through this dungeon crawl :)
+
+In part 7 we'll get our messages out of the console and start logging directly in the UI as we focus on the rest of the interface! See you there!
