@@ -556,7 +556,7 @@ To start go ahead and install the library:
 npm install pathfinding
 ```
 
-There is a bit of setup required each time you want to calculate a path. The algorithm needs a matrix that describes all blocking and unblocking locations. Let's start by creating a file called `pathfinding.js` in our lib directory at `./src/lib/pathfinding.js`. This will export a function that will require and start and an end goal and return a path that we can use elsewhere.
+There is a bit of setup required each time you want to calculate a path. The algorithm needs a matrix that describes all blocking and unblocking locations. Let's build a function to handle that for us. Start by creating a file called `pathfinding.js` in our lib directory at `./src/lib/pathfinding.js`. This will export a function that will require and start and an end goal and return a path that we can use elsewhere.
 
 It should look like this:
 
@@ -566,9 +566,10 @@ import { some, times } from "lodash";
 import ecs from "../state/ecs";
 import cache, { readCacheSet } from "../state/cache";
 import { toCell } from "./grid";
+import { grid } from "./canvas";
 
 const baseMatrix = [];
-times(34, () => baseMatrix.push(new Array(100).fill(0)));
+times(grid.height, () => baseMatrix.push(new Array(grid.width).fill(0)));
 
 export const aStar = (start, goal) => {
   const matrix = [...baseMatrix];
@@ -602,7 +603,7 @@ export const aStar = (start, goal) => {
 };
 ```
 
-Now let's update our ai system so the goblins can actually path to the player instead of just pondering the meaning of life. In `./src/systems/ai.js` import our aStar lib that we just created.
+Now let's update our ai system so the goblins can actually path to the player instead of just pondering the meaning of life. In `./src/systems/ai.js` import the aStar lib that we just created.
 
 ```diff
 import ecs from "../state/ecs";
@@ -626,7 +627,7 @@ const moveToTarget = (entity, target) => {
 
 This function takes an entity and a target and generates a path using aStar from the entity to the target. The path that is returned is inclusive - meaning it includes the beginning position and the target position. This is why we use `path[1]` as our new location. If we used `path[0]` our goblins would never move!
 
-Now we can just replace the console.log in our existing ai and replace it with a call to our new function moveToTarget.
+Now we can just replace the console.log in our existing ai with a call to our new function moveToTarget.
 
 ```diff
 -export const ai = () => {
@@ -642,7 +643,7 @@ Now we can just replace the console.log in our existing ai and replace it with a
 };
 ```
 
-You may have noticed we're now passing `player` into our ai. Eventually this should probably be stored in a target component on each entity - but for now our goblins really only have one concern so we can just pass in the player from `./src/index.js` like this:
+You may have noticed we're now passing `player` into our ai. Eventually this should probably be stored in a target component on each entity - but for now our goblins only have one concern, so we can just pass in the player from `./src/index.js` when we call our ai system like this:
 
 ```diff
 if (!playerTurn) {
@@ -657,7 +658,7 @@ Go ahead and give it a shot! Not working? Yeah, there's a bug. Try and figure it
 
 ---
 
-Did you figure it out? It's ok if you didn't - this was a tricky one that took me a bit to figure out. It goes back to a decision we made in part 2. Our Move component expects a relative position. We take something like { x: 0, y: -1 } and add it to an entities current position to calculate the new position. But our path returns absolute positions - our goblins are trying to teleport into solid rock somewhere on our map and our movement system is failing back to "goblin bump into a wall". The simplest solution here is to modify our `Move` component and `movement` system to account for both. Let's add a flag in our Move component to let the system know what sort of position it's dealing with. In `./src/state/components.js` add a property called `relative` like this:
+Did you figure it out? It's ok if you didn't - this was a tricky one that took me a bit to understand. It goes back to a decision we made in part 2. Our Move component expects a relative position. We take something like `{ x: 0, y: -1 }` and add it to an entities current position to calculate the new position. But our path returns absolute positions like `{ x: 43, y: 18 }` - our goblins are trying to teleport into solid rock somewhere on our map and our movement system is failing back to "goblin bump into a wall" bacause they are trying to move into a blocking location with a wall. The simplest solution here is to modify our `Move` component and `movement` system to account for both relative and absolute positions. Let's add a flag in our Move component to let the system know what sort of position it's dealing with. In `./src/state/components.js` add a property called `relative` like this:
 
 ```diff
 export class Move extends Component {
@@ -666,7 +667,7 @@ export class Move extends Component {
 }
 ```
 
-Now in our movement system `./src/movement.js` we just need to set mx and my to either a relative or absolute position:
+Now in our movement system `./src/movement.js` we just need to set `mx` and `my` to either a relative or absolute position:
 
 ```diff
 export const movement = () => {
@@ -684,7 +685,9 @@ export const movement = () => {
 
 Now our goblins should move straight for our @ and attack! Give it a try!
 
-Did you win? If not, you may have noticed another interesting bug. Did your @ turn into a goblin when it died? Sure looked that way to me - although it's not quite what's happening. Based on our code what really happens is after your @ dies the player takes control of a goblin riding the heros corpse around the dungeon like a skate board! For real - that's an honest interpretation of what our code is doing :)
+Did you win? If not, you may have noticed another interesting bug. It presents in different ways - crashing completely, becoming an undead zombie, or even gaining control of a goblin skate boarding around the dungeon on the eartly remains of our @!
+
+It all boils down to the player died and our code isn't handling it well :)
 
 Rather than try and solve for what to do after the player dies in our code we can just end the game. To do that we will add an IsDead component that gets added to entities when they die. Then in our game loop we can just bail if the player is dead.
 
@@ -709,7 +712,7 @@ const kill = (entity) => {
 };
 ```
 
-Finally, in our update function let's return early if the player is dead like this:
+Finally, in our update function let's return early if the player is dead in `./src/index.js` like this:
 
 ```diff
 const update = () => {
