@@ -297,3 +297,251 @@ const update = () => {
 ```
 
 With that refactor out of the way - it's time to tackle combat!
+
+Our combat simulation will be pretty basic to start. We can start with health, power, and defense. Let's add those components now in `./src/state/components.js`:
+
+```javascript
+export class Defense extends Component {
+  static properties = { max: 1, current: 1 };
+}
+
+export class Health extends Component {
+  static properties = { max: 10, current: 10 };
+}
+
+export class Power extends Component {
+  static properties = { max: 5, current: 5 };
+}
+```
+
+And as always, we need to register them in `./src/state/ecs.js`:
+
+```diff
+import {
+  Ai,
+  Appearance,
+  Description,
++  Defense,
++  Health,
+  IsBlocking,
+  IsInFov,
+  IsOpaque,
+  IsRevealed,
+  Layer100,
+  Layer400,
+  Move,
+  Position,
++  Power,
+} from "./components";
+```
+
+```diff
+// all Components must be `registered` by the engine
+ecs.registerComponent(Ai);
+ecs.registerComponent(Appearance);
+ecs.registerComponent(Description);
++ecs.registerComponent(Defense);
++ecs.registerComponent(Health);
+ecs.registerComponent(IsBlocking);
+ecs.registerComponent(IsInFov);
+ecs.registerComponent(IsOpaque);
+ecs.registerComponent(IsRevealed);
+ecs.registerComponent(Layer100);
+ecs.registerComponent(Layer400);
+ecs.registerComponent(Move);
+ecs.registerComponent(Position);
++ecs.registerComponent(Power);
+
+// register "primitives" first!
+```
+
+Because of our refactor earlier we can just add these new components to our base "Being" prefab! No more having to find every instantiated entity in the code base every time we want to add new components!
+
+In `./src/state/prefabs` just make this change:
+
+```diff
+export const Being = {
+  name: "Being",
+  components: [
+    { type: "Appearance" },
++    { type: "Defense" },
+    { type: "Description" },
++    { type: "Health" },
+    { type: "IsBlocking" },
+    { type: "Layer400" },
++    { type: "Power" },
+  ],
+};
+```
+
+Voilà - our player and goblins all have Defense, Health and Power components!
+
+How can we be so sure? Let's add a small bit of tooling to prove it. With it we'll be able to log any entity on the map with a click of the mouse!
+
+We first need a function to translate a mouse click to a location of our grid. In `./src/lib/canvas.js` add this function to the end of the file to do just that:
+
+```javascript
+export const pxToCell = (ev) => {
+  const bounds = canvas.getBoundingClientRect();
+  const relativeX = ev.clientX - bounds.left;
+  const relativeY = ev.clientY - bounds.top;
+  const colPos = Math.trunc((relativeX / cellWidth) * pixelRatio);
+  const rowPos = Math.trunc((relativeY / cellHeight) * pixelRatio);
+
+  return [colPos, rowPos];
+};
+```
+
+Then in `./src/index.js` we have to import a few things to use it:
+
+```diff
+-import { sample, times } from "lodash";
++import { get, sample, times } from "lodash";
+import "./lib/canvas.js";
+-import { grid } from "./lib/canvas";
++import { grid, pxToCell } from "./lib/canvas";
++import { toLocId } from "./lib/grid";
++import { readCacheSet } from "./state/cache";
+import { createDungeon } from "./lib/dungeon";
+```
+
+Then at the bottom the file add:
+
+```javascript
+// Only do this during development
+if (process.env.NODE_ENV === "development") {
+  const canvas = document.querySelector("#canvas");
+
+  canvas.onclick = (e) => {
+    const [x, y] = pxToCell(e);
+    const locId = toLocId({ x, y });
+
+    readCacheSet("entitiesAtLocation", locId).forEach((eId) => {
+      const entity = ecs.getEntity(eId);
+
+      console.log(
+        `${get(entity, "appearance.char", "?")} ${get(
+          entity,
+          "description.name",
+          "?"
+        )}`,
+        entity.serialize()
+      );
+    });
+  };
+}
+```
+
+All this does is use our pxToCell function to calculate a locId from a mouse click. We can then get all the entities at that locId from our cache and log them to the console.
+
+Run the game and click on your @ with the developer console open. The player entity (and the floor it's standing on) should print to the console. You can inspect this object to prove that all the expected components are there!
+
+Finally, it's time to ATTACK!
+
+In a strict ECS architecture we would accomplish this with more components and systems. Maybe a TakeDamage component that stores the amount of damage to be reduced. Then another system that would actually remove the damage. But strict adherance to principle is it's own can of worms. Let's add another tool to our toolbelts that can be used when a system might be a bit too heavy handed.
+
+Introducing Events!
+
+All an event does is send a message to all components on an entity. [This talk by Brian Bucklew](https://www.youtube.com/watch?v=4uxN5GqXcaA) explains why this might be useful - and also happens to be what inspired the event system in geotic that we are using. I struggled for a while trying to understand when to use an event and when to use a system but finally settled on only using events for simple things like component management on their parent entity. Once you need things like queries you're better off using a system. In the end you will have to decide for yourself based on the challenges your game presents.
+
+In `./src/state/components.js` we need to add an event handler to our Health component:
+
+```diff
+export class Health extends Component {
+  static properties = { max: 10, current: 10 };
+
++  onTakeDamage(evt) {
++    this.current -= evt.data.amount;
++    evt.handle();
++  }
+}
+```
+
+We can fire the `take-damage` event on any entity. If that entity has a component that cares, it gets handled, else it's just ignored.
+
+Let's use our new powers in `./src/systems/movement.js`. First create a new function, `attack` that will fire the event:
+
+```diff
+  all: [Move],
+});
+
++const attack = (entity, target) => {
++  const damage = entity.power.current - target.defense.current;
++  target.fireEvent("take-damage", { amount: damage });
++  console.log(`You kicked a ${target.description.name} for ${damage} damage!`);
++};
+
+export const movement = () => {
+```
+
+Next, instead of kicking, when encountering a blocker, we can attack instead!
+
+```diff
+if (blockers.length) {
+-  blockers.forEach((eId) => {
+-    const attacker =
+-      (entity.description && entity.description.name) || "something";
+-    const target =
+-      (ecs.getEntity(eId).description &&
+-        ecs.getEntity(eId).description.name) ||
+-      "something";
+-    console.log(`${attacker} kicked a ${target}!`);
+-  });
++  blockers.forEach((eId) => {
++  const target = ecs.getEntity(eId);
++  if (target.has("Health") && target.has("Defense")) {
++    attack(entity, target);
++  } else {
++    console.log(
++      `${entity.description.name} bump into a ${target.description.name}`
++    );
++  }
+  entity.remove(Move);
+  return;
+}
+```
+
+Try it out! Run the game with the developer console open - after attacking a goblin, click on it and inspect it's health component to see if you did the damage you expect.
+
+Pretty cool!
+
+Although you may have noticed something if you kicked your goblin more than a few times - it's health goes into the negative... Time to implement death.
+
+Right after the attack function, add kill:
+
+```javascript
+const kill = (entity) => {
+  entity.appearance.char = "%";
+  entity.remove("Ai");
+  entity.remove("IsBlocking");
+  entity.remove("Layer400");
+  entity.add("Layer300");
+};
+```
+
+Nothing crazy happening here. Just changing the char to a corpse (%) and removing some components. Without "Ai" our dead goblin doesn't get a turn anymore. We also want to remove "IsBlocking" so and change the layer from the main layer our @ inhabits to the item layer.
+
+Looks like I forgot to register the Layer300 component - do that now in `./src/state/ecs` if you also forgot :P
+
+Finally, let's update our attack function to kill the target if it's health is at or below 0:
+
+```javascript
+const attack = (entity, target) => {
+  const damage = entity.power.current - target.defense.current;
+  target.fireEvent("take-damage", { amount: damage });
+
+  if (target.health.current <= 0) {
+    kill(target);
+
+    return console.log(
+      `You kicked a ${target.description.name} for ${damage} damage and killed it!`
+    );
+  }
+
+  console.log(`You kicked a ${target.description.name} for ${damage} damage!`);
+};
+```
+
+Yeah! These dirty goblins don't stand a chance!!!
+
+Ok - this isn't really fair. They're completely defenseless. Let's actually give them a chance with some actual (albeit basic) AI!
