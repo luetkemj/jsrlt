@@ -16,7 +16,7 @@
 - [x] [Part 3 - Generating a dungeon](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part3.md)
 - [x] [part 4 - Field of view](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part4.md)
 - [x] [Part 5 - Placing enemies and kicking them (harmlessly)](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part5.md)
-- [ ] Part 6 - Doing (and taking) some damage
+- [x] [Part 6 - Doing (and taking) some damage](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part6.md)
 - [ ] Part 7 - Creating the Interface
 - [ ] Part 8 - Items and Inventory
 - [ ] Part 9 - Ranged Scrolls and Targeting
