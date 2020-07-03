@@ -424,4 +424,4 @@ Play the game again - with the console open and check out the logs. The player g
 
 In part 5 we finally added some goblins to our game! So far all they do is stand around and think about things while we kick them (harmlessly). To give them a shot at us we also (finally) added a game loop!
 
-In part 6 we look at doing (and taking) some damage when we add combat! See ya there :)
+In [part 6](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part6.md) we look at doing (and taking) some damage when we add combat! See ya there :)
