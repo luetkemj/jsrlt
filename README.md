@@ -1,4 +1,4 @@
-# From scratch rewrite of the Complete Roguelike Tutorial in JS
+# Javascript rewrite of the Complete Roguelike Tutorial
 
 ![sgsO37A](https://user-images.githubusercontent.com/925980/85092017-69762e00-b1ae-11ea-8a2a-b4f0776bf728.png)
 
@@ -17,7 +17,7 @@
 - [x] [part 4 - Field of view](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part4.md)
 - [x] [Part 5 - Placing enemies and kicking them (harmlessly)](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part5.md)
 - [x] [Part 6 - Doing (and taking) some damage](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part6.md)
-- [ ] Part 7 - Creating the Interface
+- [x] [Part 7 - Creating the Interface](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part7.md)
 - [ ] Part 8 - Items and Inventory
 - [ ] Part 9 - Ranged Scrolls and Targeting
 - [ ] Part 10 - Saving and loading
