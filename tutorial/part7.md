@@ -1,6 +1,6 @@
 #Part 7 - Creating the Interface
 
-We're getting closer and closer to a playable game but before we add additional gameplay mechanics we need to take a step and focus on the UI. We're going to add 3 elements to our game to improve the interface. A HUD with player stats, an adventure log, and an info bar.
+We're getting closer and closer to a playable game but before we add additional gameplay mechanics we need to take a step back and focus on the UI. We're going to add 3 elements to our game to improve the interface. A HUD with player stats, an adventure log, and an info bar.
 
 To start, open up `./src/lib/canvas.js` and add some new properties to the grid object. These settings detail the width, height and location of each of our new elements. When complete the grid object will look like this:
 
@@ -39,29 +39,30 @@ export const grid = {
 };
 ```
 
-Next we'll add a new function called `drawText`. This new function will accept a template that includes a text string and color and position options. It splits the string into characters and builds entity like objects it can pass to our existing `drawCell` function.
+Next we'll add a new function called `drawText`. This new function will accept a template that includes a text string, color, and position options. It splits the string into characters and builds entity like objects it can pass to our existing `drawCell` function.
 
 ```javascript
 export const drawText = (template) => {
   const textToRender = template.text;
 
   textToRender.split("").forEach((char, index) => {
+    const options = { ...template };
     const character = {
       appearance: {
         char,
-        background: template.background,
-        color: template.color,
+        background: options.background,
+        color: options.color,
       },
       position: {
-        x: index + template.x,
-        y: template.y,
+        x: index + options.x,
+        y: options.y,
       },
     };
 
-    delete template.x;
-    delete template.y;
+    delete options.x;
+    delete options.y;
 
-    drawCell(character, template);
+    drawCell(character, options);
   });
 };
 ```
@@ -75,7 +76,7 @@ In our render system `./src/systems/render.js` we'll need to import our new func
 +import { clearCanvas, drawCell, drawText, grid } from "../lib/canvas";
 ```
 
-We will also need some info from the player entity itself. As with other systems we can pass that in as an argument:
+We will also need some info from the player entity itself. As with some of our other systems we can add it as an argument:
 
 ```diff
 -export const render = () => {
@@ -89,7 +90,7 @@ Remember to actually pass it in from `./src/index.js` wherever render is called.
 +render(player);
 ```
 
-Next we can use the new drawText function right after our layers have been rendered:
+Back in `./src/systems/render.js` we can use the new drawText function right after our layers are rendered:
 
 ```diff
   layer400Entities.get().forEach((entity) => {
@@ -101,11 +102,11 @@ Next we can use the new drawText function right after our layers have been rende
   });
 
 +  drawText({
-+    text: "@ You",
-+    background: "#000",
-+    color: "white",
-+    x: 0,
-+    y: 0,
++    text: `${player.appearance.char} ${player.description.name}`,
++    background: `${player.appearance.background}`,
++    color: `${player.appearance.color}`,
++    x: grid.playerHud.x,
++    y: grid.playerHud.y,
 +  });
 };
 ```
@@ -114,7 +115,7 @@ If you try our the game now you should see the player name in the top left of th
 
 Let's add a health bar just below it.
 
-We're going to take advantage of canvas' simplistic nature. Remember it just renders sequentially what you want, where you want. With that in mind - let's render a grayed out version of our health bar below our color version that will become shorted as our health diminishes. This will in turn reveal the grayed out bar.
+To do that we'll render a grayed version below a colored version that will become shorter as our health diminishes. As our @ loses health this will create the illusion that our hearts are changing from ref to gray.
 
 Render the gray version of our health bar
 
@@ -123,15 +124,14 @@ drawText({
   text: "♥".repeat(grid.playerHud.width),
   background: "black",
   color: "#333",
-  x: 0,
-  y: 1,
+  x: grid.playerHud.x,
+  y: grid.playerHud.y + 1,
 });
 ```
 
 Calculate player health as a percentage of max and generate a string of html heart characters of the calculated length:
 
 ```javascript
-// player health bar
 const hp = player.health.current / player.health.max;
 
 if (hp > 0) {
@@ -139,8 +139,8 @@ if (hp > 0) {
     text: "♥".repeat(hp * grid.playerHud.width),
     background: "black",
     color: "red",
-    x: 0,
-    y: 1,
+    x: grid.playerHud.x,
+    y: grid.playerHud.y + 1,
   });
 }
 ```
@@ -148,8 +148,6 @@ if (hp > 0) {
 Give it a go! Attack some goblins and you should start to see your health bar diminish!
 
 Onwards to the adventure log!
-
-Adventure logs play a crucial role in roguelikes. With such minimal graphics they give the player insight into the mechanics of each turn. We will start by logging the combat mechanics from the last part.
 
 In `./src/state/ecs.js` we will add an array to store all our messages and a simple function to add new messages to it.
 
@@ -161,13 +159,12 @@ ecs.registerPrefab(Player);
 +export const messageLog = ["", "Welcome to Gobs 'O Goblins!", ""];
 +export const addLog = (text) => {
 +  messageLog.unshift(text);
-+  console.log(messageLog);
 +};
 
 export default ecs;
 ```
 
-Now in our movement system we can import our `addLog` function and change all of our console logs to addLogs.
+Now in our movement system `./src/systems/movement.js` we can import our `addLog` function and change all of our console logs to addLogs.
 
 ```diff
 -import ecs from "../state/ecs";
@@ -209,7 +206,7 @@ if (target.has("Health") && target.has("Defense")) {
 
 Finally we need to actually render the log in our render system `./src/systems/render.js`
 
-We are going to simply render the first three messages of our log. As new messages are added to the beginning, older ones will fall off. They will still be stored in the array - we just won't render them.
+We are going to explicity render the first three messages of our log. As new messages are added to the beginning, older ones will fall off. They will still be stored in the array - we just won't render them.
 
 First import `messageLog` to our render system:
 
@@ -251,7 +248,7 @@ Walk around - bump into stuff - test it out!
 
 The last thing we will do is give the player the ability to mouse over the map and get some information about entities in any visible cell.
 
-We need to import a few things to start:
+We need to import a few more things to our render system at `./src/systems/render.js`:
 
 ```diff
 +import { throttle } from "lodash";
@@ -324,7 +321,7 @@ canvas.onmousemove = throttle((e) => {
 
 There is a lot happening there - let's go through it.
 
-First we have a utility function to clear the info bar that we'll use later. It doesn't actually clear the info bar so much as it draws over it.
+First we have a utility function to clear the info bar that we'll use later. Notice, it doesn't actually clear the info bar so much as it draws over it.
 
 ```javascript
 const clearInfoBar = () =>
@@ -336,13 +333,13 @@ const clearInfoBar = () =>
   });
 ```
 
-Next we just grab a reference to the canvas dom element so we can add an onmousemove listener to it.
+Next we just grab a reference to the canvas dom element so we can add an `onmousemove` listener to it.
 
 ```javascript
 const canvas = document.querySelector("#canvas");
 ```
 
-We throttle the event here to prevent it from being called as fast as possible to help with performance. The code between the braces should only run once every 100ms while the mouse is moving over the canvas.
+We throttle the `onmousemove` event here to prevent it from being called as fast as possible to help with performance. The code between the braces should only run once every 100ms while the mouse is moving over the canvas.
 
 ```javascript
 canvas.onmousemove = throttle((e) => {
@@ -350,7 +347,7 @@ canvas.onmousemove = throttle((e) => {
 }, 100);
 ```
 
-Once in the braces we use the mouse event to calculate our location on the grid which is used to access any entities at the current location. We also clear the info bar.
+Once in the braces we use the mouse event (e) to calculate our location on the grid which is used to access any entities at the current location from cache. We also clear the info bar.
 
 ```javascript
 const [x, y] = pxToCell(e);
@@ -362,7 +359,7 @@ const entitiesAtLoc = [...esAtLoc];
 clearInfoBar();
 ```
 
-If there are any entities at the current location we use our layer queries to access only those that are visible. We then write a message for each entity - overwriting the previous to make sure only the top layer shows in the end. We also take care to write a subtly different message for entities we can currenlty see and those we have discovered.
+If there are any entities at the current location we use our layer queries to filter only those that are visible. We then write a message for each entity - overwriting the previous to make sure that int the end only the top layer shows will be seen. We also take care to write a subtly different message for entities that are in FOV and those we have been revealed but are not currently in FOV.
 
 ```javascript
 if (entitiesAtLoc) {
@@ -400,4 +397,6 @@ if (entitiesAtLoc) {
 }
 ```
 
-There is a lot of room here for customizing the messages to make this your own. But this should give you a head start towards a usable UI that gives the player needed insight into the mechanics of your game in a relatively pleasing manor.
+Our game is looking better and should make a lot more sense to a first time user. If you want anyone else to play your game (and it's ok if you don't!) these sorts of UI enhancements are critical.
+
+In part 8 we will need to expand on the UI a bit as we and items and inventory!

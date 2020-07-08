@@ -727,4 +727,4 @@ That's it! We now have slightly less stupid goblins that can actually fight back
 
 In part 6 we refactored our entities with prefabs, added tooling to inspect entities with the click of a mouse, implemented combat mechanics, and created an actual Ai for our goblins. Yeesh - that's a lot! Congrats, we're almost halfway through this dungeon crawl :)
 
-In part 7 we'll get our messages out of the console and start logging directly in the UI as we focus on the rest of the interface! See you there!
+In [part 7](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part7.md) we'll get our messages out of the console and start logging directly in the UI as we focus on the rest of the interface! See you there!
