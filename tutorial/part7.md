@@ -1,4 +1,4 @@
-#Part 7 - Creating the Interface
+# Part 7 - Creating the Interface
 
 We're getting closer and closer to a playable game but before we add additional gameplay mechanics we need to take a step back and focus on the UI. We're going to add 3 elements to our game to improve the interface. A HUD with player stats, an adventure log, and an info bar.
 
