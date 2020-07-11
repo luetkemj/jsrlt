@@ -468,19 +468,18 @@ export const rectangle = ({ x, y, width, height, hasWalls }, tileProps) => {
   const tiles = {};
 
   const x1 = x;
-  const x2 = x + width;
+  const x2 = x + width - 1;
   const y1 = y;
-  const y2 = y + height;
-
+  const y2 = y + height - 1;
   if (hasWalls) {
-    for (let yi = y1 + 1; yi < y2 - 1; yi++) {
-      for (let xi = x1 + 1; xi < x2 - 1; xi++) {
+    for (let yi = y1 + 1; yi <= y2 - 1; yi++) {
+      for (let xi = x1 + 1; xi <= x2 - 1; xi++) {
         tiles[`${xi},${yi}`] = { x: xi, y: yi, ...tileProps };
       }
     }
   } else {
-    for (let yi = y1; yi < y2; yi++) {
-      for (let xi = x1; xi < x2; xi++) {
+    for (let yi = y1; yi <= y2; yi++) {
+      for (let xi = x1; xi <= x2; xi++) {
         tiles[`${xi},${yi}`] = { x: xi, y: yi, ...tileProps };
       }
     }
