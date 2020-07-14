@@ -399,4 +399,4 @@ if (entitiesAtLoc) {
 
 Our game is looking better and should make a lot more sense to a first time user. If you want anyone else to play your game (and it's ok if you don't!) these sorts of UI enhancements are critical.
 
-In part 8 we will need to expand on the UI a bit as we and items and inventory!
+In [part 8](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part8.md) we will need to expand on the UI a bit as we and items and inventory!

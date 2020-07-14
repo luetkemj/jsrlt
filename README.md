@@ -18,7 +18,7 @@
 - [x] [Part 5 - Placing enemies and kicking them (harmlessly)](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part5.md)
 - [x] [Part 6 - Doing (and taking) some damage](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part6.md)
 - [x] [Part 7 - Creating the Interface](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part7.md)
-- [ ] Part 8 - Items and Inventory
+- [x] [Part 8 - Items and Inventory](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part8.md)
 - [ ] Part 9 - Ranged Scrolls and Targeting
 - [ ] Part 10 - Saving and loading
 - [ ] Part 11 - Delving into the Dungeon
