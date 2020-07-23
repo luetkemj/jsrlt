@@ -488,14 +488,15 @@ if (blockers.length) {
 -    console.log(`${attacker} kicked a ${target}!`);
 -  });
 +  blockers.forEach((eId) => {
-+  const target = ecs.getEntity(eId);
-+  if (target.has("Health") && target.has("Defense")) {
-+    attack(entity, target);
-+  } else {
-+    console.log(
-+      `${entity.description.name} bump into a ${target.description.name}`
-+    );
-+  }
++    const target = ecs.getEntity(eId);
++    if (target.has("Health") && target.has("Defense")) {
++      attack(entity, target);
++    } else {
++      console.log(
++        `${entity.description.name} bump into a ${target.description.name}`
++      );
++    }
++  });
   entity.remove(Move);
   return;
 }
