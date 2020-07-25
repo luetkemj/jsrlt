@@ -261,7 +261,7 @@ We need to import a few more things to our render system at `./src/systems/rende
 +import { readCacheSet } from "../state/cache";
 ```
 
-With that out of the way, add this to the very end of `./src/systems.render.js` **outside** of the render function itself:
+With that out of the way, add this to the very end of `./src/systems/render.js` **outside** of the render function itself:
 
 ```javascript
 // info bar on mouseover
