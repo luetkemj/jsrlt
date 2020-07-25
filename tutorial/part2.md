@@ -370,19 +370,15 @@ document.addEventListener("keydown", (ev) => {
 
 const processUserInput = () => {
   if (userInput === "ArrowUp") {
-    // player.position.y -= 1;
     player.add(Move, { x: 0, y: -1 });
   }
   if (userInput === "ArrowRight") {
-    // player.position.x += 1;
     player.add(Move, { x: 1, y: 0 });
   }
   if (userInput === "ArrowDown") {
-    // player.position.y += 1;
     player.add(Move, { x: 0, y: 1 });
   }
   if (userInput === "ArrowLeft") {
-    // player.position.x -= 1;
     player.add(Move, { x: -1, y: 0 });
   }
 

@@ -1,4 +1,4 @@
-#Part 6 - Doing (and taking) some damage
+# Part 6 - Doing (and taking) some damage
 
 In the last part we setup the groundwork for combat. Now we get to actually implement it. To do that we will need to create some new components to hold data related to combat.
 

@@ -1,4 +1,4 @@
-Part 5 - Placing Enemies and kicking them (harmlessly)
+# Part 5 - Placing Enemies and kicking them (harmlessly)
 
 We can finally walk around the dungeon - but it appears nobody's home. This tutorial will focus on placing monsters in the dungeon! And as the title implies, we'll kick them (harmlessly).
 
