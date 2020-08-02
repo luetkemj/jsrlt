@@ -113,12 +113,12 @@ Run the game! You should see some potions lying on the dungeon floor (!)
 
 Of course our @ needs a place to store the things it picks up. Time to add an inventory!
 
-Yet again, we'll start by adding a new component. In `./src/state/components.js` add an `Inventory`. It will only need a list property for storing our items.
+Yet again, we'll start by adding a new component. In `./src/state/components.js` add an `Inventory`. It will only need a list property for storing an array of item entities. We let geotic know this by setting the list property value to the string "<EntityArray>".
 
 ```javascript
 export class Inventory extends Component {
   static properties = {
-    list: [],
+    list: "<EntityArray>",
   };
 }
 ```
@@ -164,13 +164,11 @@ export const Player = {
 
 If you run the game now, you should be able to click on your @ and inspect it's components. There should be an empty inventory!
 
-## Adding to the inventory with (g)
+## Managing our inventory with (g)Get and (d)Drop
 
-We need to do two things to be able to actually pick up items and add them to the inventory. First, we need to create an event to handle picking the item up off the dungeon floor and adding it to our inventory. Second, we'll add a new keybinding (g) to fire the event and 'get' whatever our @ is standing on.
+We'll start in our components file with adding a couple events to the `Inventory` component. We will need an `onPickUp` and an `onDrop` event. These will handle adding and removing items to our inventory list as well as removing the item from the dungeon floor on pickup and putting down on drop.
 
-Back in `./src/state/components.js` we need to add an `onPickUp` event in our Inventory. This event will expect a payload (an entity id) that gets pushed onto the inventory list.
-
-Update the Inventory component to look like this:
+In `./src/state/components.js` add `onPickUp` and `onDrop` events to the Inventory components. Both of these events will expect some entity as a payload.
 
 ```diff
 export class Inventory extends Component {
@@ -181,35 +179,48 @@ export class Inventory extends Component {
 +  onPickUp(evt) {
 +    this.list.push(evt.data);
 +
++    if (evt.data.position) {
++      evt.data.remove("Position");
++    }
++  }
++
++  onDrop(evt) {
++    remove(this.list, (x) => x.id === evt.data.id);
++    evt.data.add("Position", this.entity.position);
 +  }
 }
 ```
 
-That was the piping to handle adding an item on the floor to our inventory but now we need to actually remove it from the dungeon floor. We can do that by handling the event on our `IsPickup` component as well. This time though, `IsPickup` will handle it by removing the entity from our `entitiesAtLocation` cache and the item's `Position` component.
+We already take advantage of the `onAttached` lifecycle method in our `Position` component. This event fires automatically when the add method is called on an entity and we use it to populate our entitiesAtLocation cache.
 
-Import `deleteCacheSet` in `./src/state/components.js`
+We can also take advantage of the `onDetached` lifecyle method to remove entities from the cache like so:
 
 ```diff
--import { addCacheSet } from "./cache";
-+import { addCacheSet, deleteCacheSet } from "./cache";
-```
+export class Position extends Component {
+  static properties = { x: 0, y: 0 };
 
-And update the `IsPickup` component to look like:
-
-```javascript
-export class IsPickup extends Component {
-  onPickUp(evt) {
+  onAttached() {
     const locId = `${this.entity.position.x},${this.entity.position.y}`;
-    deleteCacheSet("entitiesAtLocation", locId, this.entity.id);
-
-    this.entity.remove("Position");
+    addCacheSet("entitiesAtLocation", locId, this.entity.id);
   }
+
++  onDetached() {
++    const locId = `${this.x},${this.y}`;
++    deleteCacheSet("entitiesAtLocation", locId, this.entity.id);
++  }
 }
 ```
 
-Now that we have our eventing setup we just need to create a keybinding to fire them with the correct payloads.
+Now that we have our eventing setup we just need to create keybindings to fire them with the correct payloads.
 
-In `./src/index.js` add another keybinding in processUserInput:
+We will want to add some logging when things picked up and dropped so import the addLog function at the top of `./src/index.js`.
+
+```diff
+-import ecs from "./state/ecs";
++import ecs, { addLog } from "./state/ecs";
+```
+
+In the same file add the keybindings for (g)Get and (d)Drop
 
 ```diff
 if (userInput === "ArrowLeft") {
@@ -223,8 +234,7 @@ if (userInput === "ArrowLeft") {
 +      const entity = ecs.getEntity(eId);
 +      if (entity.isPickup) {
 +        pickupFound = true;
-+        player.fireEvent("pick-up", entity.id);
-+        entity.fireEvent("pick-up");
++        player.fireEvent("pick-up", entity);
 +        addLog(`You pickup a ${entity.description.name}`);
 +      }
 +    }
@@ -233,34 +243,39 @@ if (userInput === "ArrowLeft") {
 +    addLog("There is nothing to pick up here");
 +  }
 +}
++
++if (userInput === "d") {
++  if (player.inventory.list.length) {
++    player.fireEvent("drop", player.inventory.list[0]);
++  }
++}
 
 userInput = null;
 ```
 
 We're doing a few things here.
 
-First we create our keybinding for `g` and immediately create a flag to track wether or not a pickup was found.
+First we create our keybinding for `g` and immediately create a flag to track whether or not a pickup was found.
 
 ```javascript
 if (userInput === "g") {
   let pickupFound = false;
 ```
 
-After that we read from our entitiesAtLocation cache and iterate through everything we find. If it has an `isPickup` component we set our pickupFound flag to true and fire our events. Player.fireEvent takes the pickup id as a payload to be stored in our inventory. Entity.fireEvent doesn't need a payload. Finally we add a message to our adventure log describing what was picked up.
+After that we read from our entitiesAtLocation cache and iterate through everything we find. If it has an `isPickup` component we set our pickupFound flag to true and fire our pick-up event passing it the entity. Then we add a message to our adventure log describing what was picked up.
 
 ```javascript
 readCacheSet("entitiesAtLocation", toLocId(player.position)).forEach((eId) => {
   const entity = ecs.getEntity(eId);
   if (entity.isPickup) {
     pickupFound = true;
-    player.fireEvent("pick-up", entity.id);
-    entity.fireEvent("pick-up");
+    player.fireEvent("pick-up", entity);
     addLog(`You pickup a ${entity.description.name}`);
   }
 });
 ```
 
-And lastly we check the flag - if after iterating through all the entities at our location we still haven't found anything to pickup - let the player know in the adventory log.
+And lastly we check the flag - if after iterating through all the entities at our location we still haven't found anything to pickup - let the player know in the adventure log.
 
 ```javascript
 if (!pickupFound) {
@@ -268,20 +283,22 @@ if (!pickupFound) {
 }
 ```
 
-And before this will work we need to import addLog to `./src/index.js` like so:
+Next we add a keybinding for `d`. For now we just check if there is anything in the inventory and if so drop the first item. We'll add a UI next so we can actually select the item to drop but this will get us started.
 
-```diff
--import ecs from "./state/ecs";
-+import ecs, { addLog } from "./state/ecs";
+```javascript
+if (userInput === "d") {
+  if (player.inventory.list.length) {
+    addLog(`You drop a ${player.inventory.list[0].description.name}`);
+    player.fireEvent("drop", player.inventory.list[0]);
+  }
+}
 ```
 
-Give it a shot! Walk around the map and hit the `g` key while standing on a potion - it should disappear from the dungeon floor. Next click the @ and inspect it's inventory component in the console. You should see a list of unique entity ids.
-
-If everything looks good it's time to move on to rendering the inventory list in the UI.
+Now you can walk around the map and hit the `g` key to pickup potions and the `d` key to put them somewhere else!
 
 ## Inventory UI
 
-We need a UI to display the inventory and make it easier to select items to use or drop.
+We really need a UI to display the inventory so we can choose what items to drop.
 
 We'll start in `./src/lib/canvas.js` with settings for where our inventory will display on our grid and another utility function for drawing rectangles.
 
@@ -317,7 +334,7 @@ export const drawRect = (x, y, width, height, color) => {
 
 Now in our render system we need to render the inventory itself. We don't want to render it all the time, so we'll add a new concept called gameState. We'll only render our inventory when our game is in the 'INVENTORY' gameState.
 
-In `./src/systems/render.js` import the new drawText function as well as a couple of variables from `./src/index.js` that we haven't created yet.
+In `./src/systems/render.js` import the new drawRect function as well as a couple of variables from `./src/index.js` that we haven't created yet.
 
 ```diff
 import {
@@ -349,8 +366,7 @@ if (gameState === "INVENTORY") {
   });
 
   if (player.inventory.list.length) {
-    player.inventory.list.forEach((eId, idx) => {
-      const entity = ecs.getEntity(eId);
+    player.inventory.list.forEach((entity, idx) => {
       drawText({
         text: `${idx === selectedInventoryIndex ? "*" : " "}${
           entity.description.name
@@ -447,6 +463,7 @@ const processUserInput = () => {
     if (userInput === "ArrowLeft") {
       player.add(Move, { x: -1, y: 0 });
     }
+
     if (userInput === "g") {
       let pickupFound = false;
       readCacheSet("entitiesAtLocation", toLocId(player.position)).forEach(
@@ -454,8 +471,7 @@ const processUserInput = () => {
           const entity = ecs.getEntity(eId);
           if (entity.isPickup) {
             pickupFound = true;
-            player.fireEvent("pick-up", entity.id);
-            entity.fireEvent("pick-up");
+            player.fireEvent("pick-up", entity);
             addLog(`You pickup a ${entity.description.name}`);
           }
         }
@@ -464,6 +480,7 @@ const processUserInput = () => {
         addLog("There is nothing to pick up here");
       }
     }
+
     if (userInput === "i") {
       gameState = "INVENTORY";
     }
@@ -487,6 +504,13 @@ const processUserInput = () => {
         selectedInventoryIndex = player.inventory.list.length - 1;
     }
 
+    if (userInput === "d") {
+      if (player.inventory.list.length) {
+        addLog(`You drop a ${player.inventory.list[0].description.name}`);
+        player.fireEvent("drop", player.inventory.list[0]);
+      }
+    }
+
     userInput = null;
   }
 };
@@ -494,95 +518,7 @@ const processUserInput = () => {
 
 You'll notice we now check for the gameState before processing inputs. We also added a new keybinding (i)Inventory that sets the gameState and acts as a toggle for the menu.
 
-Give it a shot! Run the game and check your inventory to see the enpty state - then pick up some things and use the arrows to select different items.
-
-## Dropping Items with (d)
-
-We now have an inventory UI and a means to select specific items. How about dropping them? Let's add that next.
-
-In `./src/state/components.js` we need to add some event handlers to `Inventory` and `IsPickup`. In `Inventory` we will use the `onRemove` handler to remove the item from the inventory list when dropped like this:
-
-```diff
-export class Inventory extends Component {
-  static properties = {
-    list: [],
-  };
-
-  onPickUp(evt) {
-    this.list.push(evt.data);
-  }
-+
-+  onRemove(evt) {
-+    this.list.splice(evt.data.index, 1);
-+  }
-}
-```
-
-We removed the Position component from our item when we picked it up so now we need to add it back on drop. We can do that by handling the drop event in our `IsPickup` component. We will expect a payload with x and y coords like this:
-
-```diff
-export class IsPickup extends Component {
-  onPickUp(evt) {
-    // todo: handle this on a Position component's onBeforeDetached method
-    // https://github.com/ddmills/geotic/issues/15
-    const locId = `${this.entity.position.x},${this.entity.position.y}`;
-    deleteCacheSet("entitiesAtLocation", locId, this.entity.id);
-
-    this.entity.remove("Position");
-  }
-
-+  onDrop(evt) {
-+    const { x, y } = evt.data;
-+    this.entity.add("Position", { x, y });
-+  }
-}
-```
-
-We just need a new keybinding to handle (d)Drop. In `./src/index.js` add another keybinding when the game is in the INVENTORY state.
-
-```diff
-  if (gameState === "INVENTORY") {
-    if (userInput === "i") {
-      gameState = "GAME";
-    }
-
-    if (userInput === "ArrowUp") {
-      selectedInventoryIndex -= 1;
-      if (selectedInventoryIndex < 0) selectedInventoryIndex = 0;
-    }
-
-    if (userInput === "ArrowDown") {
-      selectedInventoryIndex += 1;
-      if (selectedInventoryIndex > player.inventory.list.length - 1)
-        selectedInventoryIndex = player.inventory.list.length - 1;
-    }
-
-+    if (userInput === "d") {
-+      const entity = ecs.getEntity(
-+        player.inventory.list[selectedInventoryIndex]
-+      );
-+      if (entity) {
-+        player.fireEvent("remove", {
-+          index: selectedInventoryIndex,
-+        });
-+        entity.fireEvent("drop", {
-+          x: player.position.x,
-+          y: player.position.y,
-+        });
-+      }
-+
-+      addLog(`You drop a ${entity.description.name} on the floor`);
-+
-+      if (selectedInventoryIndex > player.inventory.list.length - 1)
-+        selectedInventoryIndex = player.inventory.list.length - 1;
-+    }
-
-    userInput = null;
-  }
-};
-```
-
-Give it a go! You should now be able to pick things up and put them back down somewhere else in the dungeon.
+Give it a shot! Run the game and check your inventory to see the empty state - then pick up some things and use the arrows to select different items.
 
 ## Consuming a potion
 
@@ -606,7 +542,7 @@ export class Effects extends Component {
 }
 ```
 
-Up to now an entities have only supported a single component of any given type. The line `static allowMultiple = true;` tells Geotic we want to allow multiple components of this type on an entity. Each `Effect` or `ActiveEffect` contains two properties - a component name and a delta. This will allow us to easily create potions that effect different components on en entity like health and or power. We can also play with the delta (the net change in the component value) to create a health potion with a delta of 5 or a poison with a delta of -5.
+Up to now our entities have only supported a single component of any given type. The line `static allowMultiple = true;` tells Geotic we want to allow multiple components of this type on an entity. Each `Effect` or `ActiveEffect` contains two properties - a component name and a delta. This will allow us to easily create potions that effect different components on en entity like health and or power. We can also play with the delta (the net change in the component value) to create a health potion with a delta of 5 or a poison with a delta of -5.
 
 But before we get ahead of ourselves let's register our new components in `./src/state/ecs.js`:
 
@@ -686,13 +622,13 @@ It's actually a pretty simple component. We have a query to find Entities with A
 
 Finally we remove the activeEffect.
 
-Now that we have a generic effects system in place it't time to create a means to consume a potion so it can take effect!
+Now that we have a generic effects system in place it's time to create a means to consume a potion so it can take effect!
 
 Add another keybinding (c)Consume in `./src/index.js` right before (d)Drop like this:
 
 ```javascript
 if (userInput === "c") {
-  const entity = ecs.getEntity(player.inventory.list[selectedInventoryIndex]);
+  const entity = player.inventory.list[selectedInventoryIndex];
 
   if (entity) {
     if (entity.has("Effects")) {
@@ -702,11 +638,8 @@ if (userInput === "c") {
         .forEach((x) => player.add("ActiveEffects", { ...x.serialize() }));
     }
 
-    player.fireEvent("remove", {
-      index: selectedInventoryIndex,
-    });
-
     addLog(`You consume a ${entity.description.name}`);
+    entity.destroy();
 
     if (selectedInventoryIndex > player.inventory.list.length - 1)
       selectedInventoryIndex = player.inventory.list.length - 1;
@@ -714,7 +647,7 @@ if (userInput === "c") {
 }
 ```
 
-Consume does a few things. First it gets the currently selected item in your inventory. If it has effects components, it clones each of them and adds them to the player as ActiveEffects. The remove event is fired on the player entity to remove the item from their inventory and then the item is destroyed.
+Consume does a few things. First it gets the currently selected item in your inventory. If it has effects components, it clones each of them and adds them to the player as ActiveEffects. A helpful message is logged to and the item is destroyed. Remember all the way at the beginning when we set the items property on the inventory component to an "<EntityArray>"? Geotic keeps track of those entities so when we destroy one it is automatically removed from the inventory list. Pretty nice :)
 
 All that's left is to call the new effects system itself.
 
