@@ -4,9 +4,9 @@ In this part we will be adding ranged scrolls and targeting. This will require s
 
 ## Refactoring the render system
 
-In preparation for adding targeting we need to refactor the existing render system. Why? To make for a better user experience when targeting we should add a background color on the targeted cell. However, We only want to do this, when targeting. This means we will need to be able to render things differently based on the gameSate. Our current render system is not modular enough to easily allow for that. Cool? Let's go!
+In preparation for adding targeting we need to refactor the existing render system. Why? To make for a better user experience when targeting we should add a background color on the targeted cell. Because we only want to do this when targeting we need to be able to render things differently based on the gameSate. Our current render system is not modular enough to easily allow for that. Cool? Let's go!
 
-The first thing we'll do to make things more modular is update our clearCanvas function. We want to be able to clear a specifig section of the canvas instead of the entire thing every time.
+The first thing we'll do to make things more modular is update our clearCanvas function. We want to be able to clear a specific section of the canvas instead of the entire thing every time.
 
 In `./src/lib/canvas.js` change the existing clearCanvas function to this:
 
@@ -22,7 +22,7 @@ export const clearCanvas = (x, y, w, h) => {
 };
 ```
 
-Next we'll create functions to render and clear each section of our UI. That way we will be able to do something like this:
+Next we'll create functions to render and clear each section of our UI. The goal is to be able to do something like this:
 
 ```
 if (gameState === 'GAME') {
@@ -32,7 +32,7 @@ if (gameState === 'GAME') {
 }
 ```
 
-Rather than go through the refactor bit by bit, I'll just give you the final result. It really is just creating functions for each section of the UI and then calling them from the render system. Go ahead and paste the following into `./src/systems/render.js` overwriting everything that was already there.
+Rather than go through the refactor bit by bit, I'll just give you the final result. It really is just wrapping the existing logic to render each section of the UI in their own functions and then calling them individually. Go ahead and paste the following into `./src/systems/render.js` overwriting everything that was already there.
 
 ```javascript
 import { throttle } from "lodash";
@@ -260,8 +260,7 @@ const renderInventory = (player) => {
   });
 
   if (player.inventory.list.length) {
-    player.inventory.list.forEach((eId, idx) => {
-      const entity = ecs.getEntity(eId);
+    player.inventory.list.forEach((entity, idx) => {
       drawText({
         text: `${idx === selectedInventoryIndex ? "*" : " "}${
           entity.description.name
@@ -303,7 +302,7 @@ canvas.onmousemove = throttle((e) => {
 }, 50);
 ```
 
-With the refactor complete, let's add one small bit of additional functionality to our render system. When we mouse over the map to inspect things, it would be nice to add a background color to the cell we are hovering. This is similar to what we will want when actually targeting a bit later.
+Everything still working? Exactly the same as it was before? Good, let's add one small bit of additional functionality to our render system. When we mouse over the map to inspect things, it would be nice to add a background color to the cell we are hovering. This is similar to what we will want when actually targeting a bit later.
 
 Import `some` from lodash at the top of the file:
 
@@ -345,9 +344,9 @@ Our render system is fully refactored and we get a nice little bit of extra UI p
 
 ## Targeting UI
 
-With all that out of the way we can now focus on the UI for targeting. We will be adding another gameState for targeting so we can render a color for our active target. Also we will add a (temporary) keybinding to toggle the targeting state.
+With all that out of the way we can now focus on the UI for targeting. We will need another gameState and we will add a (temporary) keybinding to toggle it on and off.
 
-We'll start with the new gameState. In `./src/index.js` add a new keybinding (z) that will toggle the gameState from `GAME` to `TARGETING`
+In `./src/index.js` add a new keybinding (z) that will toggle the gameState from `GAME` to `TARGETING`
 
 ```diff
 const processUserInput = () => {
@@ -368,6 +367,8 @@ const processUserInput = () => {
 +    if (userInput === "z" || userInput === "Escape") {
 +      gameState = "GAME";
 +    }
++
++    userInput = null;
 +  }
 
   if (gameState === "INVENTORY") {
@@ -376,7 +377,7 @@ const processUserInput = () => {
     }
 ```
 
-We also need to add another conditional to our update function. This will handle updating things when in the `TARGETING` game state.
+We also need to add another conditional to our update function to call a limited set of systems when in the `TARGETING` game state.
 
 ```diff
 const update = () => {
@@ -424,7 +425,7 @@ const renderTargeting = (mPos) => {
 };
 ```
 
-And finally we need to call it onmousemove but only when the game is in the `TARGETING` state.
+And finally we need to call it onmousemove but only if the game is in the `TARGETING` state.
 
 ```diff
 canvas.onmousemove = throttle((e) => {
@@ -467,7 +468,7 @@ export class Animate extends Component {
 }
 ```
 
-You'll notice the onSetStartTime event. This will be used by our system to calculate what to render during the animation and when the animation has completed.
+You'll notice the onSetStartTime event. This will be used by our system to calculate the current frame and determine when the animation is complete.
 
 While we're in here, add an animate property to the Effects and ActiveEffects components. This will allow us to add animations to our effects too!
 
@@ -512,13 +513,14 @@ ecs.registerComponent(ActiveEffects);
 ecs.registerComponent(Ai);
 ```
 
-On to the Animation system itself. Create a new file at `./src/systems/animation.js` that look like this:
+On to the animation system itself. Create a new file at `./src/systems/animation.js` that looks like this:
 
 ```javascript
 import { last } from "lodash";
 import ecs from "../state/ecs";
 import { clearCanvas, drawCell } from "../lib/canvas";
 const { Animate, IsInFov } = require("../state/components");
+import { gameState } from "../index";
 
 const animatingEntities = ecs.createQuery({
   all: [Animate],
@@ -576,40 +578,9 @@ export const animation = () => {
 };
 ```
 
-What's going on in here? Let's go over it.
+What's going on in here? The animation function iteself boils down to a few simple steps.
 
-To start we're just importing some things we'll need and creating a query for entities with an animation to play.
-
-```javascript
-import { last } from "lodash";
-import ecs from "../state/ecs";
-import { clearCanvas, drawCell } from "../lib/canvas";
-const { Animate, IsInFov } = require("../state/components");
-import { gameState } from "../index";
-
-const animatingEntities = ecs.createQuery({
-  all: [Animate],
-});
-```
-
-Our animations are really just a quick color fade. The easiest way to do that is to use the css color function `rgba`. To do that, we will need to transform our hexcode colors to rgb. This function does that.
-
-```javascript
-const hexToRgb = (hex) => {
-  var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result
-    ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16),
-      }
-    : {};
-};
-```
-
-The animation function iteself boils down to a few simple steps.
-
-Step 1, If we're in the right game state, which animation should I run?
+Step 1: We only want to run animations in the game state and because our entities can have multiple animations we always choose the last one.
 
 ```javascript
 export const animation = () => {
@@ -621,13 +592,13 @@ export const animation = () => {
     const animate = last(entity.animate);
 ```
 
-Step 2 What are my rgb values going to be?
+Step 2: Calculate rgb values so we can create an rgba css string. This is how we will animate the alpha (opacity).
 
 ```javascript
 const { r = 255, g = 255, b = 255 } = hexToRgb(animate.color);
 ```
 
-Step 3 is the animation already complete?
+Step 3: Set the frameTime and check if our animation has completed.
 
 ```javascript
 const time = new Date();
@@ -642,7 +613,7 @@ if (frameTime > animate.duration) {
 }
 ```
 
-Step 4 How much of the animation has already completed as a percentage?
+Step 4: Calculate a percentage to use for our alpha channel based on how complete our animation is.
 
 ```javascript
 const framePercent = frameTime / animate.duration;
@@ -688,7 +659,7 @@ const update = () => {
   }
 ```
 
-To complete the integration with our effects system we just need to add Animate components to entities in the effects system. In `./src/systems/effects.js` add this line:
+To complete the integration with our effects system we just need to add Animate components from active effects to entities in the effects system. In `./src/systems/effects.js` add this line:
 
 ```diff
 export const effects = () => {
@@ -737,7 +708,23 @@ export const HealthPotion = {
 };
 ```
 
-Now after consuming a health potion you should see a heart quickly flash over the `@`! Pretty cool! Animations can now easily be added to any entities by simply attaching the animate component.
+Test it out!
+
+You'll notice that our animations only run when in the game state - so we don't see the animation from the potion until after closing the inventory. To get a more immediate response we can set the gameState back to 'GAME' after consuming a potion. Do that in `./src/index.js`.
+
+```diff
+addLog(`You consume a ${entity.description.name}`);
+    entity.destroy();
+
+    if (selectedInventoryIndex > player.inventory.list.length - 1)
+      selectedInventoryIndex = player.inventory.list.length - 1;
+
++    gameState = "GAME";
+  }
+}
+```
+
+Animations can now easily be added to any entities by simply attaching an animate component.
 
 ## LIGHTNING SCROLL!
 
@@ -817,7 +804,7 @@ ecs.registerPrefab(Player);
 +ecs.registerPrefab(ScrollLightning);
 ```
 
-The other interesting thing about our lightning scroll is in it's Effects component. There is now an events property. We can use that fire arbitrary events on an entity.
+The other interesting thing about our lightning scroll is in it's Effects component. It has and events property we will use to fire arbitrary events on an entity.
 
 Add that to the Events and ActiveEvents components in `./src/state/components.js`.
 
@@ -902,7 +889,7 @@ And remove that logic from the movement system in `./src/systems/movement.js`:
 -};
 ```
 
-For our lighning scroll we will be targeting a random nearby enemy. To accomplish this we need to be able to specify a target so we can transfer effects from the scroll to it. Then our effects system can just do it's thing.
+For our lighning scroll we will be targeting a random nearby enemy. To accomplish this we need to be able to specify a target so we can transfer effects to it from a scroll. Then our effects system can just do it's thing.
 
 First we need two more components, `Target` and `TargetingItem`. Go ahead and add them in `./src/state/components.js`.
 
@@ -970,22 +957,85 @@ export const targeting = () => {
 };
 ```
 
-To accomplish we will need a targeting system. This system will look for entities that have a target and a targeting item. The system will then take any effects from the targeting item and apply then to the target. Then the effects system that is already in place will just do it's thing.
+All this system does is transfer Effects from the TargetingItem to the Target. Pretty simple.
 
-Let's start simple with a spell that automatically targets the nearest enemy.
+With everything in place we just have to add scrolls to the map, and pick a target at random!
 
-keybindings (change consume to use)
-Scroll prefabs
-Target components
-Targeting system
-Move kill to health component
+Start by adding scrolls to the dungeon floor in `./src/index.js`.
 
-## FIREBALL!
+```diff
+times(10, () => {
+  const tile = sample(openTiles);
+  ecs.createPrefab("HealthPotion").add(Position, { x: tile.x, y: tile.y });
+});
 
-fireball scroll
-Area of effect system
++times(10, () => {
++  const tile = sample(openTiles);
++  ecs.createPrefab("ScrollLightning").add(Position, { x: tile.x, y: tile.y });
++});
+```
 
-## CONFUSION SCROLL!
+Next we need to import our targeting system and create a query to get enemies in our field of vision.
 
-confusion scroll
-target all enemies in range
+```diff
+import { fov } from "./systems/fov";
+import { movement } from "./systems/movement";
+import { render } from "./systems/render";
++import { targeting } from "./systems/targeting";
+import ecs, { addLog } from "./state/ecs";
+-import { Move, Position } from "./state/components";
++import { IsInFov, Move, Position, Ai } from "./state/components";
++
++const enemiesInFOV = ecs.createQuery({ all: [IsInFov, Ai] });
+```
+
+Next when an item is consumed we need to get a target if it requires one.
+
+```diff
+      if (entity) {
+-        if (entity.has("Effects")) {
++        if (entity.requiresTarget) {
++          // get a target that is NOT the player
++          const target = sample([...enemiesInFOV.get()]);
++
++          if (target) {
++            player.add("TargetingItem", { item: entity });
++            player.add("Target", { locId: toLocId(target.position) });
++          } else {
++            addLog(`The scroll disintegrates uselessly in your hand`);
++            entity.destroy();
++          }
++        } else if (entity.has("Effects")) {
+          // clone all effects and add to self
+          entity
+            .get("Effects")
+            .forEach((x) => player.add("ActiveEffects", { ...x.serialize() }));
+-        }
+
+-        addLog(`You consume a ${entity.description.name}`);
+-        entity.destroy();
++          addLog(`You consume a ${entity.description.name}`);
++          entity.destroy();
++        }
+
+        if (selectedInventoryIndex > player.inventory.list.length - 1)
+          selectedInventoryIndex = player.inventory.list.length - 1;
+
+        gameState = "GAME";
+      }
+```
+
+And finally, call the targeting system.
+
+```diff
+  if (playerTurn && userInput && gameState === "INVENTORY") {
+    processUserInput();
++    targeting();
+    effects();
+    render(player);
+    playerTurn = true;
+```
+
+Did you get all that? Is it working? That was a LOT. We still have 2 more scrolls to go but with so much in place already they should be a breeze!
+
+## Paralyze scroll
