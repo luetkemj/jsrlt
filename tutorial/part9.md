@@ -726,7 +726,7 @@ addLog(`You consume a ${entity.description.name}`);
 
 Animations can now easily be added to any entities by simply attaching an animate component.
 
-## LIGHTNING SCROLL!
+## Lightning Scroll
 
 With all of that out of the way we are finally able to create out first scroll! We'll start with a lightning scroll that will target a random nearby enemy.
 
@@ -1039,3 +1039,312 @@ And finally, call the targeting system.
 Did you get all that? Is it working? That was a LOT. We still have 2 more scrolls to go but with so much in place already they should be a breeze!
 
 ## Paralyze scroll
+
+Next we will expand our effects system once more and implement manual targeting for the first time when we create a paralyze scroll.
+
+Let's start with a new scroll prefab in `./src/state/prefabs.js`:
+
+```javascript
+export const ScrollParalyze = {
+  name: "ScrollParalyze",
+  inherit: ["Item"],
+  components: [
+    {
+      type: "Appearance",
+      properties: { char: "♪", color: "#DAA520" },
+    },
+    {
+      type: "Description",
+      properties: { name: "scroll of paralyze" },
+    },
+    {
+      type: "Effects",
+      properties: {
+        animate: { color: "#FFB0B0" },
+        addComponents: [
+          {
+            name: "Paralyzed",
+            properties: {},
+          },
+        ],
+        duration: 10,
+      },
+    },
+    { type: "RequiresTarget", properties: { acquired: "MANUAL" } },
+  ],
+};
+```
+
+There are a couple new things here. In effects, we now have `addComponents` and `duration` properties. `addComponents` will be used to add components to an entity - in our case a `Paralyzed` component and `duration` will be used to set the duration of a given effect. Also notice `requiresTarget.acquired` is set to `MANUAL`.
+
+Let's begin with implementing `addComponents` to our effects components and system.
+
+In `./src/state/components` we need to add a new property to both `ActiveEffects` and `Effects`. Have you noticed how these two components continue to mirror eachother? Let's dry this up a bit by referencing a single props object.
+
+```diff
++const effectProps = {
++  component: "",
++  delta: "",
++  animate: { char: "", color: "" },
++  events: [], // { name: "", args: {} },
++  addComponents: [], // { name: '', properties: {} }
++  duration: 0, // in turns
++};
+
+export class ActiveEffects extends Component {
+  static allowMultiple = true;
+-  static properties = {
+-    component: "",
+-    delta: "",
+-    animate: { char: "", color: "" },
+-    events: [], // { name: "", args: {} },
+-  };
+  static properties = effectProps;
+}
+
+export class Effects extends Component {
+  static allowMultiple = true;
+-  static properties = {
+-    component: "",
+-    delta: "",
+-    animate: { char: "", color: "" },
+-    events: [], // { name: "", args: {} },
+-  };
+  static properties = effectProps;
+}
+```
+
+We also need to fix a small bug in the Animate component - we need to remove evt.handle in the onSetStartTime event. It will prevent animations from running for a duration. Just delete that line like so:
+
+```diff
+export class Animate extends Component {
+  static allowMultiple = true;
+  static properties = {
+    startTime: null,
+    duration: 250,
+    char: "",
+    color: "",
+  };
+
+  onSetStartTime(evt) {
+    this.startTime = evt.data.time;
+-    evt.handle();
+  }
+}
+```
+
+And finally, while we're in here let's go ahead and create the `Paralyzed` component we will use later.
+
+```javascript
+export class Paralyzed extends Component {}
+```
+
+And register everything in `./src/state/ecs.js`:
+
+```diff
++  Paralyzed,
+} from "./components";
+```
+
+```diff
++  ScrollParalyze,
+} from "./prefabs";
+```
+
+```diff
+ecs.registerComponent(Move);
++ecs.registerComponent(Paralyzed);
+ecs.registerComponent(Position);
+```
+
+```diff
+ecs.registerPrefab(ScrollLightning);
++ecs.registerPrefab(ScrollParalyze);
+```
+
+Let's update our effects system to handle addComponents by adding any components on the effect to the affected entity. In `./src/systems/effect.js`
+
+```diff
+      if (c.events.length) {
+        c.events.forEach((event) => entity.fireEvent(event.name, event.args));
+      }
+
++      // handle addComponents
++      if (c.addComponents.length) {
++        c.addComponents.forEach((component) => {
++          if (!entity.has(component.name)) {
++            entity.add(component.name, component.properties);
++          }
++        });
++      }
+
+      entity.add("Animate", { ...c.animate });
+```
+
+We can now add a paralyze component to an entity via an effect. But how do we remove it?
+
+Currently our effects system only handles instant effects. Immediatly after processing the effect we remove the component from the affected entity. To handle longer lasting effects we can rely on the duration property. When processing an effect we will reduce the duration value by 1. Only when duration has reached 0 will we remove the effect component from our affected entity.
+
+We will also need to remove 'temporary' components that may have been added by an effect like paralyze.
+
+```diff
+      entity.add("Animate", { ...c.animate });
+
+-      c.remove();
++      if (!c.duration) {
++        c.remove();
++
++        if (c.addComponents.length) {
++          c.addComponents.forEach((component) => {
++            if (entity.has(component.name)) {
++              entity.remove(component.name, component.properties);
++            }
++          });
++        }
++      } else {
++        c.duration -= 1;
++      }
+    });
+  });
+};
+```
+
+With this all in place we will be able to add the Paralyze component to an entity - but how do we actually make it paralyzed? In our movement system we can just make a check for the Paralyze component and then act accordingly.
+
+In `./src/systems/movement.js` we can just remove the `Move` component and return if an entity is paralyzed like this:
+
+```diff
+export const movement = () => {
+  movableEntities.get().forEach((entity) => {
++    if (entity.has("Paralyzed")) {
++      return entity.remove(Move);
++    }
++
+    let mx = entity.move.x;
+    let my = entity.move.y;
+```
+
+Finally we just need to add our new scrolls to the dungeon and implement manual targeting.
+
+Go ahead and add the new scrolls to our dungeon in `./src/index.js`:
+
+```diff
+  ecs.createPrefab("ScrollLightning").add(Position, { x: tile.x, y: tile.y });
+});
+
++times(10, () => {
++  const tile = sample(openTiles);
++  ecs.createPrefab("ScrollParalyze").add(Position, { x: tile.x, y: tile.y });
++});
+
+fov(player);
+render(player);
+```
+
+At the very bottom of this file we added some functionality to log information to the console when in development.
+
+Replace everything from and including these lines down:
+
+```javascript
+// Only do this during development
+if (process.env.NODE_ENV === "development") {
+```
+
+with
+
+```javascript
+const canvas = document.querySelector("#canvas");
+
+canvas.onclick = (e) => {
+  const [x, y] = pxToCell(e);
+  const locId = toLocId({ x, y });
+
+  readCacheSet("entitiesAtLocation", locId).forEach((eId) => {
+    const entity = ecs.getEntity(eId);
+
+    // Only do this during development
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        `${get(entity, "appearance.char", "?")} ${get(
+          entity,
+          "description.name",
+          "?"
+        )}`,
+        entity.serialize()
+      );
+    }
+
+    if (gameState === "TARGETING") {
+      player.add("Target", { locId });
+      gameState = "GAME";
+      targeting();
+      render(player);
+    }
+  });
+};
+```
+
+We still only log details during development but we now will add a Target component to the player on click when in the `TARGETING` gamestate.
+
+Now we just need to handle manual targeting differently from random. In the keybindings section, we need to wrap the existing targeting in a conditional so it only happens when we want a random target:
+
+```diff
+      if (entity) {
+        if (entity.requiresTarget) {
+-          // get a target that is NOT the player
+-          const target = sample([...enemiesInFOV.get()]);
++          if (entity.requiresTarget.acquired === "RANDOM") {
++            // get a target that is NOT the player
++            const target = sample([...enemiesInFOV.get()]);
++
++            if (target) {
++              player.add("TargetingItem", { item: entity });
++              player.add("Target", { locId: toLocId(target.position) });
++            } else {
++              addLog(`The scroll disintegrates uselessly in your hand`);
++              entity.destroy();
++            }
++          }
+```
+
+Next if target selection is manual, we can just add the targetingItem and set the gameState to 'TARGETING'
+
+```diff
+-          if (target) {
++          if (entity.requiresTarget.acquired === "MANUAL") {
+            player.add("TargetingItem", { item: entity });
+-            player.add("Target", { locId: toLocId(target.position) });
+-          } else {
+-            addLog(`The scroll disintegrates uselessly in your hand`);
+-            entity.destroy();
++            gameState = "TARGETING";
++            return;
+          }
+        } else if (entity.has("Effects")) {
+```
+
+The only thing left is to remove the temporary keybinding for targeting and clear the TargetingItem if the player aborts.
+
+```diff
+-    if (userInput === "z") {
+-      gameState = "TARGETING";
+-    }
+
+    userInput = null;
+  }
+
+  if (gameState === "TARGETING") {
+-    if (userInput === "z" || userInput === "Escape") {
++    if (userInput === "Escape") {
++      player.remove("TargetingItem");
+       gameState = "GAME";
+     }
+```
+
+Test it out! Hopefully you are starting to see the power we now wield with our effects and targeting systems. We can fire off events, add components, modify existing components, all in an instant or over time - and we get the bonus of some simple animations to go along with it.
+
+One more scroll to go - the Fireball!
+
+## Fireball Scroll
+
+This scroll will add one additional feature to our already powerful effect system. Area of effect.
