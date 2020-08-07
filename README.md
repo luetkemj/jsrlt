@@ -27,4 +27,4 @@
 
 [Repo of the tutorial project Gobs O' Goblins is available here.](https://github.com/luetkemj/gobs-o-goblins)
 
-[The complete roguelike tutorial on Reddit](https://www.reddit.com/r/roguelikedev/comments/grccvt/roguelikedev_does_the_complete_roguelike_tutorial/)
+[The original Roguelike Tutorial - TCOD](http://rogueliketutorials.com/tutorials/tcod/)

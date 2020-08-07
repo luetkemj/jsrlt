@@ -722,4 +722,4 @@ drawText({
 
 That was a long ride! Hopefully you can see you how powerful a generic system like this can be. Can you make a poison potion or one that combines multiple effects?
 
-We'll take this concept even further in part 9 when we take on ranged scrolls and targeting!
+We'll take this concept even further in [part 9](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part9.md) when we take on ranged scrolls and targeting!
