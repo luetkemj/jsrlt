@@ -19,7 +19,7 @@
 - [x] [Part 6 - Doing (and taking) some damage](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part6.md)
 - [x] [Part 7 - Creating the Interface](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part7.md)
 - [x] [Part 8 - Items and Inventory](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part8.md)
-- [ ] Part 9 - Ranged Scrolls and Targeting
+- [x] [Part 9 - Ranged Scrolls and Targeting](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part9.md)
 - [ ] Part 10 - Saving and loading
 - [ ] Part 11 - Delving into the Dungeon
 - [ ] Part 12 - Increasing Difficulty
