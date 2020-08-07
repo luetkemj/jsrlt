@@ -1348,3 +1348,148 @@ One more scroll to go - the Fireball!
 ## Fireball Scroll
 
 This scroll will add one additional feature to our already powerful effect system. Area of effect.
+
+Start once again in `./src/state/prefabs.js` and add the definition for the fireball scroll.
+
+```javascript
+export const ScrollFireball = {
+  name: "ScrollFireball",
+  inherit: ["Item"],
+  components: [
+    {
+      type: "Appearance",
+      properties: { char: "♪", color: "#DAA520" },
+    },
+    {
+      type: "Description",
+      properties: { name: "scroll of fireball" },
+    },
+    {
+      type: "Effects",
+      properties: {
+        animate: { color: "#FFA200", char: "^" },
+        events: [
+          {
+            name: "take-damage",
+            args: { amount: 25 },
+          },
+        ],
+      },
+    },
+    {
+      type: "RequiresTarget",
+      properties: {
+        acquired: "MANUAL",
+        aoeRange: 3,
+      },
+    },
+  ],
+};
+```
+
+There is only one new property this time. `RequiresTarget.aoeRange` will be used to add multiple targets, one for every location within this range. To make this possible we need to add the aoeRange to the `RequiresTarget` component and set the `Target` component to allowMultiple.
+
+In `./src/state/components.js` make these two changes:
+
+```diff
+export class RequiresTarget extends Component {
+  static properties = {
+    acquired: "RANDOM",
++    aoeRange: 0,
+  };
+}
+
+export class Target extends Component {
++  static allowMultiple = true;
+  static properties = { locId: "" };
+}
+```
+
+We will also of course need to register the new prefab in `./src/state/ecs.js`:
+
+```diff
+  Floor,
++  ScrollFireball,
+} from "./prefabs";
+```
+
+```diff
+ecs.registerPrefab(Player);
++ecs.registerPrefab(ScrollFireball);
+ecs.registerPrefab(ScrollLightning);
+```
+
+Next we need to update the target system because it currently only supports single targets. We can now iterate over entity.target in `./src/systems/targeting.js` to handle all of them:
+
+```diff
+const { item } = entity.targetingItem;
+
+if (item && item.has("Effects")) {
+-  const targets = readCacheSet("entitiesAtLocation", entity.target.locId);
+-
+-  targets.forEach((eId) => {
+-    const target = ecs.getEntity(eId);
+-    item
+-      .get("Effects")
+-      .forEach((x) => target.add("ActiveEffects", { ...x.serialize() }));
++  entity.target.forEach((t) => {
++    const targets = readCacheSet("entitiesAtLocation", t.locId);
++
++    targets.forEach((eId) => {
++      const target = ecs.getEntity(eId);
++      if (target.isInFov) {
++        item
++          .get("Effects")
++          .forEach((x) =>
++            target.add("ActiveEffects", { ...x.serialize() })
++          );
++      }
++    });
+  });
+
+  entity.remove("Target");
+```
+
+Now that we can hanlde multiple targets, let's create them for all locations with range. We can do this by using the `circle` function from our grid library. We just pass it the location of the mouseclick when the user is targeting and the aoeRange for a radius. We can then create targets for each location within the circle.
+
+In `./src/index.js` import `circle` from the grid library:
+
+```diff
+import { grid, pxToCell } from "./lib/canvas";
+-import { toLocId } from "./lib/grid";
++import { toLocId, circle } from "./lib/grid";
+import { readCacheSet } from "./state/cache";
+```
+
+```diff
+if (gameState === "TARGETING") {
+-  player.add("Target", { locId });
++  const entity = player.inventory.list[selectedInventoryIndex];
++  if (entity.requiresTarget.aoeRange) {
++    const targets = circle({ x, y }, entity.requiresTarget.aoeRange);
++    targets.forEach((locId) => player.add("Target", { locId }));
++  } else {
++    player.add("Target", { locId });
++  }
++
+  gameState = "GAME";
+  targeting();
++  effects();
+  render(player);
+}
+```
+
+All that's left now is to add some fireball scrolls to the dungeon!
+
+```javascript
+times(10, () => {
+  const tile = sample(openTiles);
+  ecs.createPrefab("ScrollFireball").add(Position, { x: tile.x, y: tile.y });
+});
+```
+
+Give it a go! But be careful - the fireballs can hurt you too!
+
+In this part we covered a LOT. We completely refactored the render system in order to add a targeting UI. Then we added an animations system and created lightning, paralyze, and fireball scrolls. In addition to all that we now support random targets, manual targets, area of effect targets, and long term effects. Congratulations! This was easily the biggest part yet and really should have been broken into 2 or maybe three parts.
+
+In part 10 we get to take a bit of a break with something that geotic makes super easy - saving and loading.
