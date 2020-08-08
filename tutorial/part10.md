@@ -417,7 +417,7 @@ Then in `./src/systems/render.js` add a function called `renderMenu`. It will ju
 const renderMenu = () => {
   drawText({
     text: `(n)New (s)Save (l)Load | (i)Inventory (g)Pickup (arrow keys)Move/Attack (mouse)Look/Target`,
-    background: "transparent",
+    background: "#000",
     color: "#666",
     x: grid.menu.x,
     y: grid.menu.y,
