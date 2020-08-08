@@ -1492,4 +1492,4 @@ Give it a go! But be careful - the fireballs can hurt you too!
 
 In this part we covered a LOT. We completely refactored the render system in order to add a targeting UI. Then we added an animations system and created lightning, paralyze, and fireball scrolls. In addition to all that we now support random targets, manual targets, area of effect targets, and long term effects. Congratulations! This was easily the biggest part yet and really should have been broken into 2 or maybe three parts.
 
-In part 10 we get to take a bit of a break with something that geotic makes super easy - saving and loading.
+In [part 10](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part10.md) we get to slow things down a bit and focus on saving and loading.
