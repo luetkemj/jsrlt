@@ -21,7 +21,7 @@
 - [x] [Part 8 - Items and Inventory](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part8.md)
 - [x] [Part 9 - Ranged Scrolls and Targeting](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part9.md)
 - [x] [Part 10 - Saving and loading](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part10.md)
-- [ ] Part 11 - Delving into the Dungeon
+- [x] [Part 11 - Delving into the Dungeon](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part11.md)
 - [ ] Part 12 - Increasing Difficulty
 - [ ] Part 13 - Gearing up
 

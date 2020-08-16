@@ -455,4 +455,4 @@ if (player.isDead) {
 
 In this part we added saving, loading, and starting over to our game. We also added a small "menu" to inform the player about our growing set of keybindings. Finally we can now properly handle the game over. This game is really coming along!
 
-In part 11 we delve deeper as we add more levels to the dungeon!
+In [part 11](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part11.md) we delve deeper as we add more levels to the dungeon!
