@@ -600,8 +600,8 @@ canvas.onmousemove = throttle((e) => {
   if (gameState === "TARGETING") {
     const [x, y] = pxToCell(e);
     renderMap();
--    renderInfoBar({ x, y });
-+    renderInfoBar({ x, y, z: readCache("z") });
+-    renderTargeting({ x, y });
++    renderTargeting({ x, y, z: readCache("z") });
   }
 }, 50);
 ```
