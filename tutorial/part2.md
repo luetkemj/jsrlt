@@ -29,11 +29,13 @@ npm install geotic
 Next let's create a new folder `./src/state` and add a file called `ecs.js` at `./src/state/ecs.js`. Now we can import the Engine from geotic and start it up.
 
 ```javascript
-import { Engine } from "geotic";
+import { Engine } from 'geotic';
 
 const ecs = new Engine();
 
-export default ecs;
+const world = ecs.createWorld();
+
+export default world;
 ```
 
 Currently we store all of the state of our hero in the player object. To move around we directly mutate it's position values. Right now everything is very simple and easy to understand. Unfortunately this pattern won't scale very well if we were to add an NPC, a few monsters, maybe an item or two... mutating state directly like this very quickly becomes cumbersome, complicated, and prone to bugs that are hard to diagnose. Not to mention saving and loading... as our game scales up we would have to figure out how to build and rebuild state for every single piece.
@@ -44,8 +46,8 @@ To start let's look at our player object and see how we can translate it to comp
 
 ```javascript
 const player = {
-  char: "@",
-  color: "white",
+  char: '@',
+  color: 'white',
   position: {
     x: 0,
     y: 0,
@@ -60,12 +62,12 @@ First create a file to hold our components called `components.js` at `./src/stat
 Make `./src/state/components.js` look like this:
 
 ```javascript
-import { Component } from "geotic";
+import { Component } from 'geotic';
 
 export class Appearance extends Component {
   static properties = {
-    color: "#ff0077",
-    char: "?",
+    color: '#ff0077',
+    char: '?',
   };
 }
 
@@ -83,12 +85,13 @@ import { Engine } from "geotic";
 +import { Appearance, Position } from "./components";
 
 const ecs = new Engine();
+const world = ecs.createWorld()
 
 +// all Components must be `registered` by the engine
 +ecs.registerComponent(Appearance);
 +ecs.registerComponent(Position);
 
-export default ecs;
+export default world;
 ```
 
 We're ready to make our first Entity!
@@ -98,11 +101,11 @@ Just below where we register our components in `./src/state/ecs.js` we can creat
 ```diff
 ecs.registerComponent(Position);
 
-+const player = ecs.createEntity();
++const player = world.createEntity();
 +player.add(Appearance, { char: "@", color: "#fff" });
 +player.add(Position);
 
-export default ecs;
+export default world;
 ```
 
 The add method takes two arguments, a component, and a properties object to override any of the static defaults. You'll notice we don't pass a second argument when we add the Position component because the default properties are just fine.
@@ -114,10 +117,10 @@ Our first system will render our player entity to the screen. Let's create a new
 Make `./src/systems/render.js` look like this:
 
 ```javascript
-import ecs from "../state/ecs";
-import { Appearance, Position } from "../state/components";
+import world from '../state/ecs';
+import { Appearance, Position } from '../state/components';
 
-const renderableEntities = ecs.createQuery({
+const renderableEntities = world.createQuery({
   all: [Position, Appearance],
 });
 ```
@@ -157,11 +160,11 @@ Now that our ECS engine is firing on all cylinders it's time to finally make it 
 Instead of logging each entity from the system we can use our drawChar function to draw them instead. We need to add a few things to `./src/systems/render.js` to do that.
 
 ```diff
-import ecs from "../state/ecs";
+import world from "../state/ecs";
 import { Appearance, Position } from "../state/components";
 +import { clearCanvas, drawChar } from "../lib/canvas";
 
-const renderableEntities = ecs.createQuery({
+const renderableEntities = world.createQuery({
   all: [Position, Appearance],
 });
 
@@ -259,18 +262,19 @@ import { Engine } from "geotic";
 +import { Appearance, Move, Position } from "./components";
 
 const ecs = new Engine();
+const world = ecs.createWorld()
 
 // all Components must be `registered` by the engine
 ecs.registerComponent(Appearance);
 +ecs.registerComponent(Move);
 ecs.registerComponent(Position);
 
-const player = ecs.createEntity();
+const player = world.createEntity();
 
 player.add(Appearance, { char: "@", color: "#fff" });
 player.add(Position);
 
-export default ecs;
+export default world;
 ```
 
 Alright! Now we need to add this component to the player entity in processUserInput. To do that we first need to export the player entity from './src/state/ecs`
@@ -278,8 +282,8 @@ Alright! Now we need to add this component to the player entity in processUserIn
 ```diff
 ecs.registerComponent(Position);
 
--const player = ecs.createEntity();
-+export const player = ecs.createEntity();
+-const player = world.createEntity();
++export const player = world.createEntity();
 
 player.add(Appearance, { char: "@", color: "#fff" });
 ```
@@ -326,10 +330,10 @@ const processUserInput = () => {
 Almost there - we just need to add our system. Create a new file called `movement.js` at `./src/systems/movement.js`. It should look like this:
 
 ```javascript
-import ecs from "../state/ecs";
-import { Move } from "../state/components";
+import world from '../state/ecs';
+import { Move } from '../state/components';
 
-const movableEntities = ecs.createQuery({
+const movableEntities = world.createQuery({
   all: [Move],
 });
 
@@ -364,11 +368,10 @@ render();
 let userInput = null;
 
 document.addEventListener("keydown", (ev) => {
-  userInput = ev.key;
-  processUserInput();
+  processUserInput(ev.key);
 });
 
-const processUserInput = () => {
+const processUserInput = (userInput) => {
   if (userInput === "ArrowUp") {
     player.add(Move, { x: 0, y: -1 });
   }
@@ -398,8 +401,8 @@ To start let's create another file in `./src/lib` called `grid.js` at `./src/lib
 OK, go ahead and just paste this into `./src/lib/grid.js`:
 
 ```javascript
-import { grid } from "../lib/canvas";
-import { sample } from "lodash";
+import { grid } from '../lib/canvas';
+import { sample } from 'lodash';
 
 export const CARDINAL = [
   { x: 0, y: -1 }, // N
@@ -419,14 +422,14 @@ export const ALL = [...CARDINAL, ...DIAGONAL];
 
 export const toCell = (cellOrId) => {
   let cell = cellOrId;
-  if (typeof cell === "string") cell = idToCell(cell);
+  if (typeof cell === 'string') cell = idToCell(cell);
 
   return cell;
 };
 
 export const toLocId = (cellOrId) => {
   let locId = cellOrId;
-  if (typeof locId !== "string") locId = cellToId(locId);
+  if (typeof locId !== 'string') locId = cellToId(locId);
 
   return locId;
 };
@@ -505,7 +508,7 @@ export const distance = (cell1, cell2) => {
 };
 
 export const idToCell = (id) => {
-  const coords = id.split(",");
+  const coords = id.split(',');
   return { x: parseInt(coords[0], 10), y: parseInt(coords[1], 10) };
 };
 
@@ -540,18 +543,18 @@ export const getNeighbors = ({ x, y }, direction = CARDINAL) => {
   return points;
 };
 
-export const getNeighborIds = (cellOrId, direction = "CARDINAL") => {
+export const getNeighborIds = (cellOrId, direction = 'CARDINAL') => {
   let cell = toCell(cellOrId);
 
-  if (direction === "CARDINAL") {
+  if (direction === 'CARDINAL') {
     return getNeighbors(cell, CARDINAL).map(cellToId);
   }
 
-  if (direction === "DIAGONAL") {
+  if (direction === 'DIAGONAL') {
     return getNeighbors(cell, DIAGONAL).map(cellToId);
   }
 
-  if (direction === "ALL") {
+  if (direction === 'ALL') {
     return [
       ...getNeighbors(cell, CARDINAL).map(cellToId),
       ...getNeighbors(cell, DIAGONAL).map(cellToId),
@@ -561,12 +564,12 @@ export const getNeighborIds = (cellOrId, direction = "CARDINAL") => {
 
 export const isNeighbor = (a, b) => {
   let posA = a;
-  if (typeof posA === "string") {
+  if (typeof posA === 'string') {
     posA = idToCell(a);
   }
 
   let posB = b;
-  if (typeof posB === "string") {
+  if (typeof posB === 'string') {
     posB = idToCell(b);
   }
 
@@ -610,10 +613,10 @@ export const getDirection = (a, b) => {
 
   let dir;
 
-  if (ax - bx === 1 && ay - by === 0) dir = "→";
-  if (ax - bx === 0 && ay - by === -1) dir = "↑";
-  if (ax - bx === -1 && ay - by === 0) dir = "←";
-  if (ax - bx === 0 && ay - by === 1) dir = "↓";
+  if (ax - bx === 1 && ay - by === 0) dir = '→';
+  if (ax - bx === 0 && ay - by === -1) dir = '↑';
+  if (ax - bx === -1 && ay - by === 0) dir = '←';
+  if (ax - bx === 0 && ay - by === 1) dir = '↓';
 
   return dir;
 };
@@ -640,17 +643,17 @@ export const grid = {
 Now create another file called `dungeon.js` in our lib folder at `./src/lib/dungeon.js` and make it look like this:
 
 ```javascript
-import ecs from "../state/ecs";
-import { rectangle } from "./grid";
-import { grid } from "./canvas";
+import world from '../state/ecs';
+import { rectangle } from './grid';
+import { grid } from './canvas';
 
-import { Appearance, Position } from "../state/components";
+import { Appearance, Position } from '../state/components';
 
 export const createDungeon = () => {
   const dungeon = rectangle(grid.map);
   Object.keys(dungeon.tiles).forEach((key) => {
-    const tile = ecs.createEntity();
-    tile.add(Appearance, { char: "•", color: "#555" });
+    const tile = world.createEntity();
+    tile.add(Appearance, { char: '•', color: '#555' });
     tile.add(Position, dungeon.tiles[key]);
   });
 
@@ -680,8 +683,8 @@ Next we use the builtin Object.keys method to iterate over the object and create
 
 ```javascript
 Object.keys(dungeon.tiles).forEach((key) => {
-  const tile = ecs.createEntity();
-  tile.add(Appearance, { char: "•", color: "#555" });
+  const tile = world.createEntity();
+  tile.add(Appearance, { char: '•', color: '#555' });
   tile.add(Position, dungeon.tiles[key]);
 });
 ```
@@ -715,7 +718,7 @@ import ecs from "../state/ecs";
 +import { grid } from "../lib/canvas";
 import { Move } from "../state/components";
 
-const movableEntities = ecs.createQuery({
+const movableEntities = world.createQuery({
   all: [Move],
 });
 
