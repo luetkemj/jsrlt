@@ -200,11 +200,8 @@ import { render } from "./systems/render";
 -drawChar(player);
 +render();
 
-let userInput = null;
-
 document.addEventListener("keydown", (ev) => {
-  userInput = ev.key;
-  processUserInput();
+  processUserInput(ev.key);
 });
 
 const processUserInput = () => {
@@ -298,11 +295,8 @@ import { render } from "./systems/render";
 
 render();
 
-let userInput = null;
-
 document.addEventListener("keydown", (ev) => {
-  userInput = ev.key;
-  processUserInput();
+  processUserInput(ev.key);
 });
 
 const processUserInput = () => {
@@ -347,7 +341,7 @@ export const movement = () => {
     entity.position.x = mx;
     entity.position.y = my;
 
-    entity.remove(Move);
+    entity.remove(entity.move);
   });
 };
 ```
@@ -396,12 +390,12 @@ We're finally right back where we started! Your @ can move again!
 
 OK, that was a lot to get through for the same result I know, but it'll be worth it in the end. We have one more thing to do before we're done with part 2. We need a map to walk on. This will be fun because we'll get to actually flex our systems a bit and use all that work we just did!
 
-To start let's create another file in `./src/lib` called `grid.js` at `./src/lib/grid.js`. It’s going to contain a bunch of utility functions for dealing with math on a square grid. Most of the functions here are javascript implementations based on the pseudocode from [redblobgames](https://www.redblobgames.com/). I'm not going to go over any of the logic in this file. If you're curious how these functions work I highly encourage you to read the articles on redblobgames. In fact, just bookmark it now. **It is an amazing resource**.
+To start let's create another file in `./src/lib` called `grid.js`. It’s going to contain a bunch of utility functions for dealing with math on a square grid. Most of the functions here are javascript implementations based on the pseudocode from [redblobgames](https://www.redblobgames.com/). I'm not going to go over any of the logic in this file. If you're curious how these functions work I highly encourage you to read the articles on redblobgames. In fact, just bookmark it now. **It is an amazing resource**.
 
 OK, go ahead and just paste this into `./src/lib/grid.js`:
 
 ```javascript
-import { grid } from "../lib/canvas";
+import { grid } from "./canvas";
 import { sample } from "lodash";
 
 export const CARDINAL = [
