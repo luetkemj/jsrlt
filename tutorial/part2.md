@@ -10,7 +10,7 @@ For a detailed overview of ECS in practice Thomas Biskup (ADOM) gave a great tal
 
 For a formal and rather dry definition we can turn to wikipedia:
 
-> ECS follows the composition over inheritance principle that allows greater flexibility in defining entities where every object in a game's scene is an entity (e.g. enemies, bullets, vehicles, etc.). Every entity consists of one or more components which contains data or state. Therefore, the behavior of an entity can be changed at runtime by systems that add, remove or mutate components. This eliminates the ambiguity problems of deep and wide inheritance hierarchies that are difficult to understand, maintain and extend. - [wikipedia](https://en.wikipedia.org/wiki/Entity_component_system)
+> ECS follows the composition over inheritance principle that allows greater flexibility in defining entities where every object in a game's scene is an entity (e.g. enemies, bullets, vehicles, etc.). Every entity consists of one or more components which contain data or state. Therefore, the behavior of an entity can be changed at runtime by systems that add, remove or mutate components. This eliminates the ambiguity problems of deep and wide inheritance hierarchies that are difficult to understand, maintain and extend. - [wikipedia](https://en.wikipedia.org/wiki/Entity_component_system)
 
 At it's core ECS is just a way to manage your application state. State is stored in components, entities are collections of those components, and systems run logic on those entities in order to add, remove, and mutate their components.
 
@@ -53,7 +53,7 @@ const player = {
 };
 ```
 
-Components are just containers used to store bits of state. Our player object is only concerned with two things so far, appearance (char, color) and position. Let's to compoenents to track these bits of state, Appearance and Position. A generic components we will be able to use them not just for our player but also for goblins, items, walls, anything we can see and pin to a specific location!
+Components are just containers used to store bits of state. Our player object is only concerned with two things so far, appearance (char, color) and position. Let's use components to track these bits of state, Appearance and Position. As generic components we will be able to use them not just for our player but also for goblins, items, walls, anything we can see and pin to a specific location!
 
 First create a file to hold our components called `components.js` at `./src/state/components.js`. In a larger application you may want to create individual files for each component but this is fine for our purposes.
 
@@ -178,7 +178,7 @@ export const render = () => {
 };
 ```
 
-Next we can go clean up a couple things in `./src/index.js`. We can remove the player object now that we have are storing the player as an entity. And we also don't need to call drawChar or clearCanvas anymore.
+Next we can go clean up a couple things in `./src/index.js`. We can remove the player object now that we are storing the player as an entity. And we also don't need to call drawChar or clearCanvas anymore.
 
 ```diff
 import "./lib/canvas.js";
@@ -225,11 +225,11 @@ const processUserInput = () => {
 
 ```
 
-Ok - if we try to run the game now we should see our @ symbol in the top left but it no longer moves. If you look in the javascriopt console, you'll see it's lit up with errors. We deleted our player object but still reference it in processUserInput. We need to think about how to process user input the ECS way.
+Ok - if we try to run the game now we should see our @ symbol in the top left but it no longer moves. If you look in the javascript console, you'll see it's lit up with errors. We deleted our player object but still reference it in processUserInput. We need to think about how to process user input the ECS way.
 
-Moving an entity from one position to another is fraught with peril. What if there is a wall, or a trap, or a monster, or the entity is paralyzed, or mind controlled... What we would like to have is a generic way to let our game know where an entity intends to move, and then let the our game resolve what actually happens. To do this we will be adding an additional component and system.
+Moving an entity from one position to another is fraught with peril. What if there is a wall, or a trap, or a monster, or the entity is paralyzed, or mind controlled... What we would like to have is a generic way to let our game know where an entity intends to move, and then let our game resolve what actually happens. To do this we will be adding an additional component and system.
 
-Lets start by adding another component to `./src/state/components`. The order here doesn't really matter, I just like to keep them in alphabetical. :P
+Let's start by adding another component to `./src/state/components`. The order here doesn't really matter, I just like to keep them in alphabetical. :P
 
 ```diff
 import { Component } from "geotic";
@@ -323,7 +323,7 @@ const processUserInput = () => {
 };
 ```
 
-Almost there - we just need add our system. Create a new file called `movement.js` at `./src/systems/movement.js`. It should look like this:
+Almost there - we just need to add our system. Create a new file called `movement.js` at `./src/systems/movement.js`. It should look like this:
 
 ```javascript
 import ecs from "../state/ecs";
@@ -391,9 +391,9 @@ We're finally right back where we started! Your @ can move again!
 
 ---
 
-OK, that was a lot to get through for the same result I know, but it'll be worth in the end. We have one more thing to do before we're done with part 2. We need a map to walk on. This will be fun because we'll get to actually flex our systems a bit and use all that work we just did!
+OK, that was a lot to get through for the same result I know, but it'll be worth it in the end. We have one more thing to do before we're done with part 2. We need a map to walk on. This will be fun because we'll get to actually flex our systems a bit and use all that work we just did!
 
-To start let's create another file in `./src/lib` called `grid.js` at `./src/lib/grid.js`. It going to contain a bunch of utility functions for dealing with math on a square grid. Most of the functions here are javascript implementations based on the pseudocode from [redblobgames](https://www.redblobgames.com/). I'm not going to go over any of the logic in this file. If you're curious how these functions work I highly encourage you to read the articles on redblobgames. In fact, just bookmark it now. **It is an amazing resource**.
+To start let's create another file in `./src/lib` called `grid.js` at `./src/lib/grid.js`. It’s going to contain a bunch of utility functions for dealing with math on a square grid. Most of the functions here are javascript implementations based on the pseudocode from [redblobgames](https://www.redblobgames.com/). I'm not going to go over any of the logic in this file. If you're curious how these functions work I highly encourage you to read the articles on redblobgames. In fact, just bookmark it now. **It is an amazing resource**.
 
 OK, go ahead and just paste this into `./src/lib/grid.js`:
 
@@ -704,11 +704,11 @@ import { Move } from "./state/components";
 render();
 ```
 
-See how we create the "dungeon", then use the center location to set our player's intital starting position.
+See how we create the "dungeon", then use the center location to set our player's initial starting position.
 
 If you check out the game now you should see a large grid of dots. Notice how you didn't have to do anything extra to render those dots - the render system took care of it for you because each tile has the required components in the renderableEntities query. Cool!
 
-One problem you may notice is that nothing stops the player from walking right off the edge of the map. We can handle that in our movement system. We just need to make a quick check that the goal location from an entities move component is within our map's boundaries. Go ahead and make the following changes to `./src/systems/movement`
+One problem you may notice is that nothing stops the player from walking right off the edge of the map. We can handle that in our movement system. We just need to make a quick check that the goal location from an entity's move component is within our map's boundaries. Go ahead and make the following changes to `./src/systems/movement`
 
 ```diff
 import ecs from "../state/ecs";
