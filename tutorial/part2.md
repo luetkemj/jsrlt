@@ -29,7 +29,7 @@ npm install geotic
 Next let's create a new folder `./src/state` and add a file called `ecs.js` at `./src/state/ecs.js`. Now we can import the Engine from geotic and start it up.
 
 ```javascript
-import { Engine } from 'geotic';
+import { Engine } from "geotic";
 
 const ecs = new Engine();
 
@@ -46,8 +46,8 @@ To start let's look at our player object and see how we can translate it to comp
 
 ```javascript
 const player = {
-  char: '@',
-  color: 'white',
+  char: "@",
+  color: "white",
   position: {
     x: 0,
     y: 0,
@@ -62,12 +62,12 @@ First create a file to hold our components called `components.js` at `./src/stat
 Make `./src/state/components.js` look like this:
 
 ```javascript
-import { Component } from 'geotic';
+import { Component } from "geotic";
 
 export class Appearance extends Component {
   static properties = {
-    color: '#ff0077',
-    char: '?',
+    color: "#ff0077",
+    char: "?",
   };
 }
 
@@ -117,8 +117,8 @@ Our first system will render our player entity to the screen. Let's create a new
 Make `./src/systems/render.js` look like this:
 
 ```javascript
-import world from '../state/ecs';
-import { Appearance, Position } from '../state/components';
+import world from "../state/ecs";
+import { Appearance, Position } from "../state/components";
 
 const renderableEntities = world.createQuery({
   all: [Position, Appearance],
@@ -330,8 +330,8 @@ const processUserInput = () => {
 Almost there - we just need to add our system. Create a new file called `movement.js` at `./src/systems/movement.js`. It should look like this:
 
 ```javascript
-import world from '../state/ecs';
-import { Move } from '../state/components';
+import world from "../state/ecs";
+import { Move } from "../state/components";
 
 const movableEntities = world.createQuery({
   all: [Move],
@@ -401,8 +401,8 @@ To start let's create another file in `./src/lib` called `grid.js` at `./src/lib
 OK, go ahead and just paste this into `./src/lib/grid.js`:
 
 ```javascript
-import { grid } from '../lib/canvas';
-import { sample } from 'lodash';
+import { grid } from "../lib/canvas";
+import { sample } from "lodash";
 
 export const CARDINAL = [
   { x: 0, y: -1 }, // N
@@ -422,14 +422,14 @@ export const ALL = [...CARDINAL, ...DIAGONAL];
 
 export const toCell = (cellOrId) => {
   let cell = cellOrId;
-  if (typeof cell === 'string') cell = idToCell(cell);
+  if (typeof cell === "string") cell = idToCell(cell);
 
   return cell;
 };
 
 export const toLocId = (cellOrId) => {
   let locId = cellOrId;
-  if (typeof locId !== 'string') locId = cellToId(locId);
+  if (typeof locId !== "string") locId = cellToId(locId);
 
   return locId;
 };
@@ -508,7 +508,7 @@ export const distance = (cell1, cell2) => {
 };
 
 export const idToCell = (id) => {
-  const coords = id.split(',');
+  const coords = id.split(",");
   return { x: parseInt(coords[0], 10), y: parseInt(coords[1], 10) };
 };
 
@@ -543,18 +543,18 @@ export const getNeighbors = ({ x, y }, direction = CARDINAL) => {
   return points;
 };
 
-export const getNeighborIds = (cellOrId, direction = 'CARDINAL') => {
+export const getNeighborIds = (cellOrId, direction = "CARDINAL") => {
   let cell = toCell(cellOrId);
 
-  if (direction === 'CARDINAL') {
+  if (direction === "CARDINAL") {
     return getNeighbors(cell, CARDINAL).map(cellToId);
   }
 
-  if (direction === 'DIAGONAL') {
+  if (direction === "DIAGONAL") {
     return getNeighbors(cell, DIAGONAL).map(cellToId);
   }
 
-  if (direction === 'ALL') {
+  if (direction === "ALL") {
     return [
       ...getNeighbors(cell, CARDINAL).map(cellToId),
       ...getNeighbors(cell, DIAGONAL).map(cellToId),
@@ -564,12 +564,12 @@ export const getNeighborIds = (cellOrId, direction = 'CARDINAL') => {
 
 export const isNeighbor = (a, b) => {
   let posA = a;
-  if (typeof posA === 'string') {
+  if (typeof posA === "string") {
     posA = idToCell(a);
   }
 
   let posB = b;
-  if (typeof posB === 'string') {
+  if (typeof posB === "string") {
     posB = idToCell(b);
   }
 
@@ -613,10 +613,10 @@ export const getDirection = (a, b) => {
 
   let dir;
 
-  if (ax - bx === 1 && ay - by === 0) dir = '→';
-  if (ax - bx === 0 && ay - by === -1) dir = '↑';
-  if (ax - bx === -1 && ay - by === 0) dir = '←';
-  if (ax - bx === 0 && ay - by === 1) dir = '↓';
+  if (ax - bx === 1 && ay - by === 0) dir = "→";
+  if (ax - bx === 0 && ay - by === -1) dir = "↑";
+  if (ax - bx === -1 && ay - by === 0) dir = "←";
+  if (ax - bx === 0 && ay - by === 1) dir = "↓";
 
   return dir;
 };
@@ -643,17 +643,17 @@ export const grid = {
 Now create another file called `dungeon.js` in our lib folder at `./src/lib/dungeon.js` and make it look like this:
 
 ```javascript
-import world from '../state/ecs';
-import { rectangle } from './grid';
-import { grid } from './canvas';
+import world from "../state/ecs";
+import { rectangle } from "./grid";
+import { grid } from "./canvas";
 
-import { Appearance, Position } from '../state/components';
+import { Appearance, Position } from "../state/components";
 
 export const createDungeon = () => {
   const dungeon = rectangle(grid.map);
   Object.keys(dungeon.tiles).forEach((key) => {
     const tile = world.createEntity();
-    tile.add(Appearance, { char: '•', color: '#555' });
+    tile.add(Appearance, { char: "•", color: "#555" });
     tile.add(Position, dungeon.tiles[key]);
   });
 
@@ -684,7 +684,7 @@ Next we use the builtin Object.keys method to iterate over the object and create
 ```javascript
 Object.keys(dungeon.tiles).forEach((key) => {
   const tile = world.createEntity();
-  tile.add(Appearance, { char: '•', color: '#555' });
+  tile.add(Appearance, { char: "•", color: "#555" });
   tile.add(Position, dungeon.tiles[key]);
 });
 ```
