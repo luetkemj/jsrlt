@@ -239,11 +239,10 @@ Let's use that to our advantage and move our hero when the arrow keys are presse
 let userInput = null;
 
 document.addEventListener("keydown", (ev) => {
-  userInput = ev.key;
-  processUserInput();
+  processUserInput(ev.key);
 });
 
-const processUserInput = () => {
+const processUserInput = (userInput) => {
   if (userInput === "ArrowUp") {
     player.position.y -= 1;
   }
