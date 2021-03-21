@@ -627,11 +627,14 @@ const dungeon = createDungeon({
 +fov();
 render();
 
+let userInput = null;
+
 document.addEventListener("keydown", (ev) => {
-  processUserInput(ev.key);
+  userInput = ev.key;
+  processUserInput();
 });
 
-const processUserInput = (userInput) => {
+const processUserInput = () => {
   if (userInput === "ArrowUp") {
     player.add(Move, { x: 0, y: -1 });
   }

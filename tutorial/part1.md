@@ -236,11 +236,14 @@ Now if you open your browser's developer console and start typing on the game wi
 Let's use that to our advantage and move our hero when the arrow keys are pressed. Replace the event listener we just created with the follow:
 
 ```javascript
+let userInput = null;
+
 document.addEventListener('keydown', (ev) => {
-  processUserInput(ev.key);
+  userInput = ev.key;
+  processUserInput();
 });
 
-const processUserInput = (userInput) => {
+const processUserInput = () => {
   if (userInput === 'ArrowUp') {
     player.position.y -= 1;
   }

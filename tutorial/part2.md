@@ -200,11 +200,14 @@ import { render } from "./systems/render";
 -drawChar(player);
 +render();
 
+let userInput = null;
+
 document.addEventListener("keydown", (ev) => {
-  processUserInput(ev.key);
+  userInput = ev.key;
+  processUserInput();
 });
 
-const processUserInput = (userInput) => {
+const processUserInput = () => {
   if (userInput === "ArrowUp") {
     player.position.y -= 1;
   }
@@ -295,11 +298,14 @@ import { render } from "./systems/render";
 
 render();
 
+let userInput = null;
+
 document.addEventListener("keydown", (ev) => {
-  processUserInput(ev.key);
+  userInput = ev.key;
+  processUserInput();
 });
 
-const processUserInput = (userInput) => {
+const processUserInput = () => {
   if (userInput === "ArrowUp") {
 -    player.position.y -= 1;
 +    player.add(Move, { x: 0, y: -1 });
@@ -359,11 +365,14 @@ import { Move } from "./state/components";
 
 render();
 
+let userInput = null;
+
 document.addEventListener("keydown", (ev) => {
-  processUserInput(ev.key);
+  userInput = ev.key;
+  processUserInput();
 });
 
-const processUserInput = (userInput) => {
+const processUserInput = () => {
   if (userInput === "ArrowUp") {
     player.add(Move, { x: 0, y: -1 });
   }
