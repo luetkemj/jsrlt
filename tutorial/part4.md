@@ -10,7 +10,7 @@ Let's add backgrounds to our tiles first. In `./src/lib/canvas.js` add two addit
 
 ```javascript
 const drawBackground = ({ color, position }) => {
-  if (color === "transparent") return;
+  if (color === 'transparent') return;
 
   ctx.fillStyle = color;
 
@@ -38,12 +38,12 @@ Instead of calling `drawChar` directly we can now call `drawCell` and pass it an
 No just replace `drawChar` in `./src/systems/render.js` with `drawCell` and pass the entity in directly.
 
 ```diff
-import ecs from "../state/ecs";
+import world from "../state/ecs";
 import { Appearance, Position } from "../state/components";
 -import { clearCanvas, drawChar } from "../lib/canvas";
 +import { clearCanvas, drawCell } from "../lib/canvas";
 
-const renderableEntities = ecs.createQuery({
+const renderableEntities = world.createQuery({
   all: [Position, Appearance],
 });
 
@@ -113,11 +113,11 @@ ecs.registerComponent(IsBlocking);
 ecs.registerComponent(Move);
 ecs.registerComponent(Position);
 
-export const player = ecs.createEntity();
+export const player = world.createEntity();
 player.add(Appearance, { char: "@", color: "#fff" });
 player.add(Position);
 
-export default ecs;
+export default world;
 ```
 
 I like to number my layers in hundreds just in case I need to squeeze something in between. 100 is for the ground, 300 for things on the ground like items, and 400 is for the player.
@@ -153,12 +153,12 @@ if (tile.sprite === "FLOOR") {
 And then in `./src/state/ecs.js` we need to add `Layer400` to our player entity.
 
 ```diff
-export const player = ecs.createEntity();
+export const player = world.createEntity();
 player.add(Appearance, { char: "@", color: "#fff" });
 +player.add(Layer400);
 player.add(Position);
 
-export default ecs;
+export default world;
 ```
 
 Almost there! We need to query for each layer component so we can render everything in the correct order.
@@ -166,25 +166,25 @@ Almost there! We need to query for each layer component so we can render everyth
 Make `./src/systems/render.js` look like this:
 
 ```javascript
-import ecs from "../state/ecs";
+import world from '../state/ecs';
 import {
   Appearance,
   Position,
   Layer100,
   Layer300,
   Layer400,
-} from "../state/components";
-import { clearCanvas, drawCell } from "../lib/canvas";
+} from '../state/components';
+import { clearCanvas, drawCell } from '../lib/canvas';
 
-const layer100Entities = ecs.createQuery({
+const layer100Entities = world.createQuery({
   all: [Position, Appearance, Layer100],
 });
 
-const layer300Entities = ecs.createQuery({
+const layer300Entities = world.createQuery({
   all: [Position, Appearance, Layer300],
 });
 
-const layer400Entities = ecs.createQuery({
+const layer400Entities = world.createQuery({
   all: [Position, Appearance, Layer400],
 });
 
@@ -269,7 +269,7 @@ export class Position extends Component {
 Next we need to update our cache when an entity moves. The simplest way for us to do this right now is in our movement system at `./src/systems/movement.js`. After all the checks to determine if an entity is able to move and right before we update their position, we can update the cache like this:
 
 ```diff
-import ecs from "../state/ecs";
+import world from "../state/ecs";
 +import { addCacheSet, deleteCacheSet, readCacheSet } from "../state/cache";
 import { grid } from "../lib/canvas";
 import { Move } from "../state/components";
@@ -299,31 +299,31 @@ Ok, now that our cache is all set up, let's use it! Still in `./src/systems/move
 ```javascript
 // check for blockers
 const blockers = [];
-for (const e of ecs.entities.all) {
-  if (e.position.x === mx && e.position.y === my && e.isBlocking) {
+for (const e of world._entities) {
+  if (e[1].position.x === mx && e[1].position.y === my && e[1].isBlocking) {
     blockers.push(e);
   }
 }
 if (blockers.length) {
-  entity.remove(Move);
+  entity.remove(entity.move);
   return;
 }
 ```
 
-With out new one that uses our cache:
+With the new one that uses our cache:
 
 ```javascript
 const blockers = [];
 // read from cache
-const entitiesAtLoc = readCacheSet("entitiesAtLocation", `${mx},${my}`);
+const entitiesAtLoc = readCacheSet('entitiesAtLocation', `${mx},${my}`);
 
 for (const eId of entitiesAtLoc) {
-  if (ecs.getEntity(eId).isBlocking) {
+  if (world.getEntity(eId).isBlocking) {
     blockers.push(eId);
   }
 }
 if (blockers.length) {
-  entity.remove(Move);
+  entity.remove(entity.move);
   return;
 }
 ```
@@ -337,7 +337,7 @@ We are all caught up and ready to add "Field of Vision"! We are going to be usin
 Ok, first let's go ahead and add a new file called `fov.js` to our lib directory at `./src/lib/fov.js`. Go ahead and paste this code into it:
 
 ```javascript
-import { distance, idToCell } from "./grid";
+import { distance, idToCell } from './grid';
 
 const octantTransforms = [
   { xx: 1, xy: 0, yx: 0, yy: 1 },
@@ -454,17 +454,17 @@ export default function createFOV(
 Now that we have our Field of Vision algorithm in place we need to wire it up. We'll start with the system this time. Create a new file, again called `fov.js` but this time in the systems directory at `./src/systems/fov.js`. It should look like this:
 
 ```javascript
-import { readCacheSet } from "../state/cache";
-import ecs, { player } from "../state/ecs";
-import { grid } from "../lib/canvas";
-import createFOV from "../lib/fov";
-import { IsInFov, IsOpaque, IsRevealed } from "../state/components";
+import { readCacheSet } from '../state/cache';
+import world, { player } from '../state/ecs';
+import { grid } from '../lib/canvas';
+import createFOV from '../lib/fov';
+import { IsInFov, IsOpaque, IsRevealed } from '../state/components';
 
-const inFovEntities = ecs.createQuery({
+const inFovEntities = world.createQuery({
   all: [IsInFov],
 });
 
-const opaqueEntities = ecs.createQuery({
+const opaqueEntities = world.createQuery({
   all: [IsOpaque],
 });
 
@@ -477,17 +477,17 @@ export const fov = () => {
   const FOV = createFOV(opaqueEntities, width, height, originX, originY, 10);
 
   // clear out stale fov
-  inFovEntities.get().forEach((x) => x.remove(IsInFov));
+  inFovEntities.get().forEach((x) => x.remove(x.isInFov));
 
   FOV.fov.forEach((locId) => {
-    const entitiesAtLoc = readCacheSet("entitiesAtLocation", locId);
+    const entitiesAtLoc = readCacheSet('entitiesAtLocation', locId);
 
     if (entitiesAtLoc) {
       entitiesAtLoc.forEach((eId) => {
-        const entity = ecs.getEntity(eId);
+        const entity = world.getEntity(eId);
         entity.add(IsInFov);
 
-        if (!entity.has("IsRevealed")) {
+        if (!entity.has(IsRevealed)) {
           entity.add(IsRevealed);
         }
       });
@@ -508,20 +508,20 @@ export const fov = () => {
   const FOV = createFOV(opaqueEntities, width, height, originX, originY, 10);
 ```
 
-Next the system removes the component `IsInFov` from all entities that prevuosly had it. This clears out all the state from the last turn ensuring that we always have the latest data.
+Next the system removes the component `IsInFov` from all entities that previously had it. This clears out all the state from the last turn ensuring that we always have the latest data.
 
 The algorithm returns an array of locations within our hero's field of view. We need to find all the entities at each location and add an `IsInFov` component. If an entity has never been revealed we will add an `IsRevealed` component as well. This is why we created a cache earlier. Having to iterate through every entity in the game for every tile in FOV every turn... ugh. That would be bad.
 
 ```javascript
   // clear out stale fov
-  inFovEntities.get().forEach((x) => x.remove(IsInFov));
+  inFovEntities.get().forEach((x) => x.remove(x.isInFov));
 
   FOV.fov.forEach((locId) => {
     const entitiesAtLoc = readCacheSet("entitiesAtLocation", locId);
 
     if (entitiesAtLoc) {
       entitiesAtLoc.forEach((eId) => {
-        const entity = ecs.getEntity(eId);
+        const entity = world.getEntity(eId);
         entity.add(IsInFov);
 
         if (!entity.has("IsRevealed")) {
@@ -707,7 +707,7 @@ export const render = () => {
     if (entity.isInFov) {
       drawCell(entity);
     } else {
-      drawCell(entity, { color: "#333" });
+      drawCell(entity, { color: '#333' });
     }
   });
 
@@ -715,7 +715,7 @@ export const render = () => {
     if (entity.isInFov) {
       drawCell(entity);
     } else {
-      drawCell(entity, { color: "#333" });
+      drawCell(entity, { color: '#333' });
     }
   });
 
@@ -723,7 +723,7 @@ export const render = () => {
     if (entity.isInFov) {
       drawCell(entity);
     } else {
-      drawCell(entity, { color: "#100" });
+      drawCell(entity, { color: '#100' });
     }
   });
 };
