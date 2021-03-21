@@ -524,7 +524,7 @@ The algorithm returns an array of locations within our hero's field of view. We 
         const entity = world.getEntity(eId);
         entity.add(IsInFov);
 
-        if (!entity.has("IsRevealed")) {
+        if (!entity.has(IsRevealed)) {
           entity.add(IsRevealed);
         }
       });
@@ -586,7 +586,7 @@ import {
 
 ```diff
 if (tile.sprite === "WALL") {
-  const entity = ecs.createEntity();
+  const entity = world.createEntity();
   entity.add(Appearance, { char: "#", color: "#AAA" });
   entity.add(IsBlocking);
 +  entity.add(IsOpaque);
@@ -627,14 +627,11 @@ const dungeon = createDungeon({
 +fov();
 render();
 
-let userInput = null;
-
 document.addEventListener("keydown", (ev) => {
-  userInput = ev.key;
-  processUserInput();
+  processUserInput(ev.key);
 });
 
-const processUserInput = () => {
+const processUserInput = (userInput) => {
   if (userInput === "ArrowUp") {
     player.add(Move, { x: 0, y: -1 });
   }
