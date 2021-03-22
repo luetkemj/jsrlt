@@ -40,26 +40,26 @@ Next we'll create a couple of new prefabs - the generic base `Item` and our more
 
 ```javascript
 export const Item = {
-  name: "Item",
+  name: 'Item',
   components: [
-    { type: "Appearance" },
-    { type: "Description" },
-    { type: "Layer300" },
-    { type: "IsPickup" },
+    { type: 'Appearance' },
+    { type: 'Description' },
+    { type: 'Layer300' },
+    { type: 'IsPickup' },
   ],
 };
 
 export const HealthPotion = {
-  name: "HealthPotion",
-  inherit: ["Item"],
+  name: 'HealthPotion',
+  inherit: ['Item'],
   components: [
     {
-      type: "Appearance",
-      properties: { char: "!", color: "#DAA520" },
+      type: 'Appearance',
+      properties: { char: '!', color: '#DAA520' },
     },
     {
-      type: "Description",
-      properties: { name: "health potion" },
+      type: 'Description',
+      properties: { name: 'health potion' },
     },
   ],
 };
@@ -96,12 +96,12 @@ And finally let's actually add them to the map in `./src/index.js`:
 ```diff
 times(5, () => {
   const tile = sample(openTiles);
-  ecs.createPrefab("Goblin").add(Position, { x: tile.x, y: tile.y });
+  world.createPrefab("Goblin").add(Position, { x: tile.x, y: tile.y });
 });
 
 +times(5, () => {
 +  const tile = sample(openTiles);
-+  ecs.createPrefab("HealthPotion").add(Position, { x: tile.x, y: tile.y });
++  world.createPrefab("HealthPotion").add(Position, { x: tile.x, y: tile.y });
 +});
 ```
 
@@ -113,12 +113,12 @@ Run the game! You should see some potions lying on the dungeon floor (!)
 
 Of course our @ needs a place to store the things it picks up. Time to add an inventory!
 
-Yet again, we'll start by adding a new component. In `./src/state/components.js` add an `Inventory`. It will only need a list property for storing an array of item entities. We let geotic know this by setting the list property value to the string "<EntityArray>".
+Yet again, we'll start by adding a new component. In `./src/state/components.js` add an `Inventory`. It will only need a list property for storing an array of item entities.
 
 ```javascript
 export class Inventory extends Component {
   static properties = {
-    list: "<EntityArray>",
+    list: [],
   };
 }
 ```
@@ -180,13 +180,13 @@ export class Inventory extends Component {
 +    this.list.push(evt.data);
 +
 +    if (evt.data.position) {
-+      evt.data.remove("Position");
++      evt.data.remove(evt.data.position);
 +    }
 +  }
 +
 +  onDrop(evt) {
 +    remove(this.list, (x) => x.id === evt.data.id);
-+    evt.data.add("Position", this.entity.position);
++    evt.data.add(Position, this.entity.position);
 +  }
 }
 ```
@@ -216,8 +216,8 @@ Now that we have our eventing setup we just need to create keybindings to fire t
 We will want to add some logging when things picked up and dropped so import the addLog function at the top of `./src/index.js`.
 
 ```diff
--import ecs from "./state/ecs";
-+import ecs, { addLog } from "./state/ecs";
+-import world from "./state/ecs";
++import world, { addLog } from "./state/ecs";
 ```
 
 In the same file add the keybindings for (g)Get and (d)Drop
@@ -231,7 +231,7 @@ if (userInput === "ArrowLeft") {
 +  let pickupFound = false;
 +  readCacheSet("entitiesAtLocation", toLocId(player.position)).forEach(
 +    (eId) => {
-+      const entity = ecs.getEntity(eId);
++      const entity = world.getEntity(eId);
 +      if (entity.isPickup) {
 +        pickupFound = true;
 +        player.fireEvent("pick-up", entity);
@@ -265,11 +265,11 @@ if (userInput === "g") {
 After that we read from our entitiesAtLocation cache and iterate through everything we find. If it has an `isPickup` component we set our pickupFound flag to true and fire our pick-up event passing it the entity. Then we add a message to our adventure log describing what was picked up.
 
 ```javascript
-readCacheSet("entitiesAtLocation", toLocId(player.position)).forEach((eId) => {
-  const entity = ecs.getEntity(eId);
+readCacheSet('entitiesAtLocation', toLocId(player.position)).forEach((eId) => {
+  const entity = world.getEntity(eId);
   if (entity.isPickup) {
     pickupFound = true;
-    player.fireEvent("pick-up", entity);
+    player.fireEvent('pick-up', entity);
     addLog(`You pickup a ${entity.description.name}`);
   }
 });
@@ -279,17 +279,17 @@ And lastly we check the flag - if after iterating through all the entities at ou
 
 ```javascript
 if (!pickupFound) {
-  addLog("There is nothing to pick up here");
+  addLog('There is nothing to pick up here');
 }
 ```
 
 Next we add a keybinding for `d`. For now we just check if there is anything in the inventory and if so drop the first item. We'll add a UI next so we can actually select the item to drop but this will get us started.
 
 ```javascript
-if (userInput === "d") {
+if (userInput === 'd') {
   if (player.inventory.list.length) {
     addLog(`You drop a ${player.inventory.list[0].description.name}`);
-    player.fireEvent("drop", player.inventory.list[0]);
+    player.fireEvent('drop', player.inventory.list[0]);
   }
 }
 ```
@@ -319,7 +319,7 @@ export const grid = {
 And then import rectangle from our grid library and use it in a new function that will draw rectangles on our grid like this:
 
 ```javascript
-import { rectangle } from "./grid";
+import { rectangle } from './grid';
 ```
 
 ```javascript
@@ -353,14 +353,14 @@ import { readCacheSet } from "../state/cache";
 And then at the bottom of our render function add another conditional to display our inventory as an overlay if we're in the INVENTORY gameState:
 
 ```javascript
-if (gameState === "INVENTORY") {
+if (gameState === 'INVENTORY') {
   // translucent to obscure the game map
-  drawRect(0, 0, grid.width, grid.height, "rgba(0,0,0,0.65)");
+  drawRect(0, 0, grid.width, grid.height, 'rgba(0,0,0,0.65)');
 
   drawText({
-    text: "INVENTORY",
-    background: "black",
-    color: "white",
+    text: 'INVENTORY',
+    background: 'black',
+    color: 'white',
     x: grid.inventory.x,
     y: grid.inventory.y,
   });
@@ -368,20 +368,20 @@ if (gameState === "INVENTORY") {
   if (player.inventory.list.length) {
     player.inventory.list.forEach((entity, idx) => {
       drawText({
-        text: `${idx === selectedInventoryIndex ? "*" : " "}${
+        text: `${idx === selectedInventoryIndex ? '*' : ' '}${
           entity.description.name
         }`,
-        background: "black",
-        color: "white",
+        background: 'black',
+        color: 'white',
         x: grid.inventory.x,
         y: grid.inventory.y + 3 + idx,
       });
     });
   } else {
     drawText({
-      text: "-empty-",
-      background: "black",
-      color: "#666",
+      text: '-empty-',
+      background: 'black',
+      color: '#666',
       x: grid.inventory.x,
       y: grid.inventory.y + 3,
     });
@@ -416,19 +416,19 @@ const update = () => {
     return;
   }
 
-  if (playerTurn && userInput && gameState === "INVENTORY") {
+  if (playerTurn && userInput && gameState === 'INVENTORY') {
     processUserInput();
     render(player);
     playerTurn = true;
   }
 
-  if (playerTurn && userInput && gameState === "GAME") {
+  if (playerTurn && userInput && gameState === 'GAME') {
     processUserInput();
     movement();
     fov(player);
     render(player);
 
-    if (gameState === "GAME") {
+    if (gameState === 'GAME') {
       playerTurn = false;
     }
   }
@@ -450,64 +450,64 @@ We need to update our processUserInput function to handle different gameStates a
 
 ```javascript
 const processUserInput = () => {
-  if (gameState === "GAME") {
-    if (userInput === "ArrowUp") {
+  if (gameState === 'GAME') {
+    if (userInput === 'ArrowUp') {
       player.add(Move, { x: 0, y: -1 });
     }
-    if (userInput === "ArrowRight") {
+    if (userInput === 'ArrowRight') {
       player.add(Move, { x: 1, y: 0 });
     }
-    if (userInput === "ArrowDown") {
+    if (userInput === 'ArrowDown') {
       player.add(Move, { x: 0, y: 1 });
     }
-    if (userInput === "ArrowLeft") {
+    if (userInput === 'ArrowLeft') {
       player.add(Move, { x: -1, y: 0 });
     }
 
-    if (userInput === "g") {
+    if (userInput === 'g') {
       let pickupFound = false;
-      readCacheSet("entitiesAtLocation", toLocId(player.position)).forEach(
+      readCacheSet('entitiesAtLocation', toLocId(player.position)).forEach(
         (eId) => {
-          const entity = ecs.getEntity(eId);
+          const entity = world.getEntity(eId);
           if (entity.isPickup) {
             pickupFound = true;
-            player.fireEvent("pick-up", entity);
+            player.fireEvent('pick-up', entity);
             addLog(`You pickup a ${entity.description.name}`);
           }
         }
       );
       if (!pickupFound) {
-        addLog("There is nothing to pick up here");
+        addLog('There is nothing to pick up here');
       }
     }
 
-    if (userInput === "i") {
-      gameState = "INVENTORY";
+    if (userInput === 'i') {
+      gameState = 'INVENTORY';
     }
 
     userInput = null;
   }
 
-  if (gameState === "INVENTORY") {
-    if (userInput === "i" || userInput === "Escape") {
-      gameState = "GAME";
+  if (gameState === 'INVENTORY') {
+    if (userInput === 'i' || userInput === 'Escape') {
+      gameState = 'GAME';
     }
 
-    if (userInput === "ArrowUp") {
+    if (userInput === 'ArrowUp') {
       selectedInventoryIndex -= 1;
       if (selectedInventoryIndex < 0) selectedInventoryIndex = 0;
     }
 
-    if (userInput === "ArrowDown") {
+    if (userInput === 'ArrowDown') {
       selectedInventoryIndex += 1;
       if (selectedInventoryIndex > player.inventory.list.length - 1)
         selectedInventoryIndex = player.inventory.list.length - 1;
     }
 
-    if (userInput === "d") {
+    if (userInput === 'd') {
       if (player.inventory.list.length) {
         addLog(`You drop a ${player.inventory.list[0].description.name}`);
-        player.fireEvent("drop", player.inventory.list[0]);
+        player.fireEvent('drop', player.inventory.list[0]);
       }
     }
 
@@ -533,16 +533,16 @@ Let's start as always in `./src/state/components.js`. Add the two components we 
 ```javascript
 export class ActiveEffects extends Component {
   static allowMultiple = true;
-  static properties = { component: "", delta: "" };
+  static properties = { component: '', delta: '' };
 }
 
 export class Effects extends Component {
   static allowMultiple = true;
-  static properties = { component: "", delta: "" };
+  static properties = { component: '', delta: '' };
 }
 ```
 
-Up to now our entities have only supported a single component of any given type. The line `static allowMultiple = true;` tells Geotic we want to allow multiple components of this type on an entity. Each `Effect` or `ActiveEffect` contains two properties - a component name and a delta. This will allow us to easily create potions that effect different components on en entity like health and or power. We can also play with the delta (the net change in the component value) to create a health potion with a delta of 5 or a poison with a delta of -5.
+Up to now our entities have only supported a single component of any given type. The line `static allowMultiple = true;` tells Geotic we want to allow multiple components of this type on an entity. Each `Effect` or `ActiveEffect` contains two properties - a component name and a delta. This will allow us to easily create potions that effect different components on an entity like health and or power. We can also play with the delta (the net change in the component value) to create a health potion with a delta of 5 or a poison with a delta of -5.
 
 But before we get ahead of ourselves let's register our new components in `./src/state/ecs.js`:
 
@@ -594,10 +594,10 @@ export const HealthPotion = {
 Now for our effects system. Add a new file `effect.js` at `./src/systems/effects.js` it should look like this:
 
 ```javascript
-import ecs from "../state/ecs";
-const { ActiveEffects } = require("../state/components");
+import world from '../state/ecs';
+const { ActiveEffects } = require('../state/components');
 
-const activeEffectsEntities = ecs.createQuery({
+const activeEffectsEntities = world.createQuery({
   all: [ActiveEffects],
 });
 
@@ -612,7 +612,7 @@ export const effects = () => {
         }
       }
 
-      c.remove();
+      c.destroy();
     });
   });
 };
@@ -627,19 +627,21 @@ Now that we have a generic effects system in place it's time to create a means t
 Add another keybinding (c)Consume in `./src/index.js` right before (d)Drop like this:
 
 ```javascript
-if (userInput === "c") {
+if (userInput === 'c') {
   const entity = player.inventory.list[selectedInventoryIndex];
 
   if (entity) {
-    if (entity.has("Effects")) {
+    if (entity.has('Effects')) {
       // clone all effects and add to self
       entity
-        .get("Effects")
-        .forEach((x) => player.add("ActiveEffects", { ...x.serialize() }));
+        .get('Effects')
+        .forEach((x) => player.add('ActiveEffects', { ...x.serialize() }));
     }
 
     addLog(`You consume a ${entity.description.name}`);
-    entity.destroy();
+    player.inventory.list = player.inventory.list.filter(
+      (item) => item.id !== entity.id
+    );
 
     if (selectedInventoryIndex > player.inventory.list.length - 1)
       selectedInventoryIndex = player.inventory.list.length - 1;
@@ -654,7 +656,7 @@ All that's left is to call the new effects system itself.
 Import the new system in `./src/index.js`:
 
 ```javascript
-import { effects } from "./systems/effects";
+import { effects } from './systems/effects';
 ```
 
 And then call it in the update function like this:

@@ -160,7 +160,7 @@ Alright, lets go ahead and import the random function from lodash at the top of 
 
 ```diff
 +import { random } from "lodash";
-import ecs from "../state/ecs";
+import world from "../state/ecs";
 import { rectangle } from "./grid";
 ```
 

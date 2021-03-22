@@ -9,11 +9,11 @@ Geotic really does make saving super simple - so long as all your game state is 
 ```javascript
 const saveGame = () => {
   const data = ecs.serialize();
-  localStorage.setItem("savegame", data);
+  localStorage.setItem('savegame', data);
 };
 
 const loadGame = () => {
-  const data = localStorage.getItem("savegame");
+  const data = localStorage.getItem('savegame');
   ecs.deserialize(data);
 };
 ```
@@ -35,8 +35,8 @@ And then just put that code in `./src/index.js` and remove the import at the top
 
 ```diff
 import { targeting } from "./systems/targeting";
--import ecs, { addLog } from "./state/ecs";
-+import ecs from "./state/ecs";
+-import world, { addLog } from "./state/ecs";
++import world from "./state/ecs";
 import { IsInFov, Move, Position, Ai } from "./state/components";
 
 +export const messageLog = ["", "Welcome to Gobs 'O Goblins!", ""];
@@ -50,8 +50,8 @@ Now we just need to fix the imports in a few files that still expect our message
 `./src/systems/targeting.js`
 
 ```diff
--import ecs, { addLog } from "../state/ecs";
-+import ecs from "../state/ecs";
+-import world, { addLog } from "../state/ecs";
++import world from "../state/ecs";
 +import { addLog } from "../index";
 import { readCacheSet } from "../state/cache";
 ```
@@ -67,8 +67,8 @@ import { readCacheSet } from "../state/cache";
 `./src/systems/movement.js`
 
 ```diff
--import ecs, { addLog } from "../state/ecs";
-+import ecs from "../state/ecs";
+-import world, { addLog } from "../state/ecs";
++import world from "../state/ecs";
 +import { addLog } from "../index";
 import { addCacheSet, deleteCacheSet, readCacheSet } from "../state/cache";
 ```
@@ -122,8 +122,8 @@ const saveGame = () => {
     playerId: player.id,
     messageLog,
   };
-  localStorage.setItem("gameSaveData", JSON.stringify(gameSaveData));
-  addLog("Game saved");
+  localStorage.setItem('gameSaveData', JSON.stringify(gameSaveData));
+  addLog('Game saved');
 };
 ```
 
@@ -153,9 +153,9 @@ Our loadGame function is a little bit bigger:
 
 ```javascript
 const loadGame = () => {
-  const data = JSON.parse(localStorage.getItem("gameSaveData"));
+  const data = JSON.parse(localStorage.getItem('gameSaveData'));
   if (!data) {
-    addLog("Failed to load - no saved games found");
+    addLog('Failed to load - no saved games found');
     return;
   }
 
@@ -170,11 +170,11 @@ const loadGame = () => {
 
   userInput = null;
   playerTurn = true;
-  gameState = "GAME";
+  gameState = 'GAME';
   selectedInventoryIndex = 0;
 
   messageLog = data.messageLog;
-  addLog("Game loaded");
+  addLog('Game loaded');
 };
 ```
 
@@ -217,7 +217,7 @@ And then just reset the other little bits we track to their intitial state:
 ```javascript
 userInput = null;
 playerTurn = true;
-gameState = "GAME";
+gameState = 'GAME';
 selectedInventoryIndex = 0;
 ```
 
@@ -237,8 +237,8 @@ We do need to make two more adjustments - our `player` and `messageLog` variable
 ```
 
 ```diff
--const player = ecs.createPrefab("Player");
-+let player = ecs.createPrefab("Player");
+-const player = world.createPrefab("Player");
++let player = world.createPrefab("Player");
 ```
 
 And finally we need a keybinding:
@@ -270,10 +270,10 @@ const newGame = () => {
 
   userInput = null;
   playerTurn = true;
-  gameState = "GAME";
+  gameState = 'GAME';
   selectedInventoryIndex = 0;
 
-  messageLog = ["", "Welcome to Gobs 'O Goblins!", ""];
+  messageLog = ['', "Welcome to Gobs 'O Goblins!", ''];
 
   initGame();
 };
@@ -300,7 +300,7 @@ The body of this function already exists in `./src/index.js` - start by wrapping
     height: grid.map.height,
   });
 
-  let player = ecs.createPrefab("Player");
+  let player = world.createPrefab("Player");
   player.add(Position, {
     x: dungeon.rooms[0].center.x,
     y: dungeon.rooms[0].center.y,
@@ -312,27 +312,27 @@ The body of this function already exists in `./src/index.js` - start by wrapping
 
   times(5, () => {
     const tile = sample(openTiles);
-    ecs.createPrefab("Goblin").add(Position, { x: tile.x, y: tile.y });
+    world.createPrefab("Goblin").add(Position, { x: tile.x, y: tile.y });
   });
 
   times(10, () => {
     const tile = sample(openTiles);
-    ecs.createPrefab("HealthPotion").add(Position, { x: tile.x, y: tile.y });
+    world.createPrefab("HealthPotion").add(Position, { x: tile.x, y: tile.y });
   });
 
   times(10, () => {
     const tile = sample(openTiles);
-    ecs.createPrefab("ScrollLightning").add(Position, { x: tile.x, y: tile.y });
+    world.createPrefab("ScrollLightning").add(Position, { x: tile.x, y: tile.y });
   });
 
   times(10, () => {
     const tile = sample(openTiles);
-    ecs.createPrefab("ScrollParalyze").add(Position, { x: tile.x, y: tile.y });
+    world.createPrefab("ScrollParalyze").add(Position, { x: tile.x, y: tile.y });
   });
 
   times(10, () => {
     const tile = sample(openTiles);
-    ecs.createPrefab("ScrollFireball").add(Position, { x: tile.x, y: tile.y });
+    world.createPrefab("ScrollFireball").add(Position, { x: tile.x, y: tile.y });
   });
 
   fov(player);
@@ -345,8 +345,8 @@ The only modification we need to make is to initialize the `player` variable out
 Within the initGame function change this line:
 
 ```diff
--let player = ecs.createPrefab("Player");
-+player = ecs.createPrefab("Player");
+-let player = world.createPrefab("Player");
++player = world.createPrefab("Player");
 ```
 
 And intitialize the player variable with the others:
@@ -417,8 +417,8 @@ Then in `./src/systems/render.js` add a function called `renderMenu`. It will ju
 const renderMenu = () => {
   drawText({
     text: `(n)New (s)Save (l)Load | (i)Inventory (g)Pickup (arrow keys)Move/Attack (mouse)Look/Target`,
-    background: "#000",
-    color: "#666",
+    background: '#000',
+    color: '#666',
     x: grid.menu.x,
     y: grid.menu.y,
   });

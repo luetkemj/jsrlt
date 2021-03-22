@@ -35,8 +35,8 @@ if (gameState === 'GAME') {
 Rather than go through the refactor bit by bit, I'll just give you the final result. It really is just wrapping the existing logic to render each section of the UI in their own functions and then calling them individually. Go ahead and paste the following into `./src/systems/render.js` overwriting everything that was already there.
 
 ```javascript
-import { throttle } from "lodash";
-import ecs from "../state/ecs";
+import { throttle } from 'lodash';
+import world from '../state/ecs';
 import {
   Appearance,
   IsInFov,
@@ -45,8 +45,8 @@ import {
   Layer100,
   Layer300,
   Layer400,
-} from "../state/components";
-import { messageLog } from "../state/ecs";
+} from '../state/components';
+import { messageLog } from '../state/ecs';
 import {
   clearCanvas,
   drawCell,
@@ -54,22 +54,22 @@ import {
   drawText,
   grid,
   pxToCell,
-} from "../lib/canvas";
-import { toLocId } from "../lib/grid";
-import { readCacheSet } from "../state/cache";
-import { gameState, selectedInventoryIndex } from "../index";
+} from '../lib/canvas';
+import { toLocId } from '../lib/grid';
+import { readCacheSet } from '../state/cache';
+import { gameState, selectedInventoryIndex } from '../index';
 
-const layer100Entities = ecs.createQuery({
+const layer100Entities = world.createQuery({
   all: [Position, Appearance, Layer100],
   any: [IsInFov, IsRevealed],
 });
 
-const layer300Entities = ecs.createQuery({
+const layer300Entities = world.createQuery({
   all: [Position, Appearance, Layer300],
   any: [IsInFov, IsRevealed],
 });
 
-const layer400Entities = ecs.createQuery({
+const layer400Entities = world.createQuery({
   all: [Position, Appearance, Layer400, IsInFov],
 });
 
@@ -84,7 +84,7 @@ const renderMap = () => {
     if (entity.isInFov) {
       drawCell(entity);
     } else {
-      drawCell(entity, { color: "#333" });
+      drawCell(entity, { color: '#333' });
     }
   });
 
@@ -92,7 +92,7 @@ const renderMap = () => {
     if (entity.isInFov) {
       drawCell(entity);
     } else {
-      drawCell(entity, { color: "#333" });
+      drawCell(entity, { color: '#333' });
     }
   });
 
@@ -100,7 +100,7 @@ const renderMap = () => {
     if (entity.isInFov) {
       drawCell(entity);
     } else {
-      drawCell(entity, { color: "#100" });
+      drawCell(entity, { color: '#100' });
     }
   });
 };
@@ -126,9 +126,9 @@ const renderPlayerHud = (player) => {
   });
 
   drawText({
-    text: "♥".repeat(grid.playerHud.width),
-    background: "black",
-    color: "#333",
+    text: '♥'.repeat(grid.playerHud.width),
+    background: 'black',
+    color: '#333',
     x: grid.playerHud.x,
     y: grid.playerHud.y + 1,
   });
@@ -137,9 +137,9 @@ const renderPlayerHud = (player) => {
 
   if (hp > 0) {
     drawText({
-      text: "♥".repeat(hp * grid.playerHud.width),
-      background: "black",
-      color: "red",
+      text: '♥'.repeat(hp * grid.playerHud.width),
+      background: 'black',
+      color: 'red',
       x: grid.playerHud.x,
       y: grid.playerHud.y + 1,
     });
@@ -160,24 +160,24 @@ const renderMessageLog = () => {
 
   drawText({
     text: messageLog[2],
-    background: "#000",
-    color: "#666",
+    background: '#000',
+    color: '#666',
     x: grid.messageLog.x,
     y: grid.messageLog.y,
   });
 
   drawText({
     text: messageLog[1],
-    background: "#000",
-    color: "#aaa",
+    background: '#000',
+    color: '#aaa',
     x: grid.messageLog.x,
     y: grid.messageLog.y + 1,
   });
 
   drawText({
     text: messageLog[0],
-    background: "#000",
-    color: "#fff",
+    background: '#000',
+    color: '#fff',
     x: grid.messageLog.x,
     y: grid.messageLog.y + 2,
   });
@@ -188,7 +188,7 @@ const clearInfoBar = () => {
     text: ` `.repeat(grid.infoBar.width),
     x: grid.infoBar.x,
     y: grid.infoBar.y,
-    background: "black",
+    background: 'black',
   });
 };
 
@@ -198,7 +198,7 @@ const renderInfoBar = (mPos) => {
   const { x, y } = mPos;
   const locId = toLocId({ x, y });
 
-  const esAtLoc = readCacheSet("entitiesAtLocation", locId) || [];
+  const esAtLoc = readCacheSet('entitiesAtLocation', locId) || [];
   const entitiesAtLoc = [...esAtLoc];
 
   clearInfoBar();
@@ -222,16 +222,16 @@ const renderInfoBar = (mPos) => {
             text: `You see a ${entity.description.name}(${entity.appearance.char}) here.`,
             x: grid.infoBar.x,
             y: grid.infoBar.y,
-            color: "white",
-            background: "black",
+            color: 'white',
+            background: 'black',
           });
         } else {
           drawText({
             text: `You remember seeing a ${entity.description.name}(${entity.appearance.char}) here.`,
             x: grid.infoBar.x,
             y: grid.infoBar.y,
-            color: "white",
-            background: "black",
+            color: 'white',
+            background: 'black',
           });
         }
       });
@@ -241,20 +241,20 @@ const renderInfoBar = (mPos) => {
 const renderInventory = (player) => {
   clearInfoBar();
   // translucent to obscure the game map
-  drawRect(0, 0, grid.width, grid.height, "rgba(0,0,0,0.65)");
+  drawRect(0, 0, grid.width, grid.height, 'rgba(0,0,0,0.65)');
 
   drawText({
-    text: "INVENTORY",
-    background: "black",
-    color: "white",
+    text: 'INVENTORY',
+    background: 'black',
+    color: 'white',
     x: grid.inventory.x,
     y: grid.inventory.y,
   });
 
   drawText({
-    text: "(c)Consume (d)Drop",
-    background: "black",
-    color: "#666",
+    text: '(c)Consume (d)Drop',
+    background: 'black',
+    color: '#666',
     x: grid.inventory.x,
     y: grid.inventory.y + 1,
   });
@@ -262,20 +262,20 @@ const renderInventory = (player) => {
   if (player.inventory.list.length) {
     player.inventory.list.forEach((entity, idx) => {
       drawText({
-        text: `${idx === selectedInventoryIndex ? "*" : " "}${
+        text: `${idx === selectedInventoryIndex ? '*' : ' '}${
           entity.description.name
         }`,
-        background: "black",
-        color: "white",
+        background: 'black',
+        color: 'white',
         x: grid.inventory.x,
         y: grid.inventory.y + 3 + idx,
       });
     });
   } else {
     drawText({
-      text: "-empty-",
-      background: "black",
-      color: "#666",
+      text: '-empty-',
+      background: 'black',
+      color: '#666',
       x: grid.inventory.x,
       y: grid.inventory.y + 3,
     });
@@ -287,14 +287,14 @@ export const render = (player) => {
   renderPlayerHud(player);
   renderMessageLog();
 
-  if (gameState === "INVENTORY") {
+  if (gameState === 'INVENTORY') {
     renderInventory(player);
   }
 };
 
-const canvas = document.querySelector("#canvas");
+const canvas = document.querySelector('#canvas');
 canvas.onmousemove = throttle((e) => {
-  if (gameState === "GAME") {
+  if (gameState === 'GAME') {
     const [x, y] = pxToCell(e);
     renderMap();
     renderInfoBar({ x, y });
@@ -406,7 +406,7 @@ const renderTargeting = (mPos) => {
   const { x, y } = mPos;
   const locId = toLocId({ x, y });
 
-  const esAtLoc = readCacheSet("entitiesAtLocation", locId) || [];
+  const esAtLoc = readCacheSet('entitiesAtLocation', locId) || [];
   const entitiesAtLoc = [...esAtLoc];
 
   clearInfoBar();
@@ -415,8 +415,8 @@ const renderTargeting = (mPos) => {
     if (some(entitiesAtLoc, (eId) => ecs.getEntity(eId).isRevealed)) {
       drawCell({
         appearance: {
-          char: "",
-          background: "rgba(74, 232, 218, 0.5)",
+          char: '',
+          background: 'rgba(74, 232, 218, 0.5)',
         },
         position: { x, y },
       });
@@ -457,8 +457,8 @@ export class Animate extends Component {
   static properties = {
     startTime: null,
     duration: 250,
-    char: "",
-    color: "",
+    char: '',
+    color: '',
   };
 
   onSetStartTime(evt) {
@@ -516,13 +516,13 @@ ecs.registerComponent(Ai);
 On to the animation system itself. Create a new file at `./src/systems/animation.js` that looks like this:
 
 ```javascript
-import { last } from "lodash";
-import ecs from "../state/ecs";
-import { clearCanvas, drawCell } from "../lib/canvas";
-const { Animate, IsInFov } = require("../state/components");
-import { gameState } from "../index";
+import { last } from 'lodash';
+import world from '../state/ecs';
+import { clearCanvas, drawCell } from '../lib/canvas';
+const { Animate, IsInFov } = require('../state/components');
+import { gameState } from '../index';
 
-const animatingEntities = ecs.createQuery({
+const animatingEntities = world.createQuery({
   all: [Animate],
 });
 
@@ -538,7 +538,7 @@ const hexToRgb = (hex) => {
 };
 
 export const animation = () => {
-  if (gameState !== "GAME") {
+  if (gameState !== 'GAME') {
     return;
   }
 
@@ -550,12 +550,12 @@ export const animation = () => {
     const time = new Date();
     // set animation startTime
     if (!animate.startTime) {
-      entity.fireEvent("set-start-time", { time });
+      entity.fireEvent('set-start-time', { time });
     }
     const frameTime = time - animate.startTime;
     // end animation when complete
     if (frameTime > animate.duration) {
-      return entity.remove("Animate");
+      return entity.remove('Animate');
     }
     const framePercent = frameTime / animate.duration;
     // do the animation
@@ -570,7 +570,7 @@ export const animation = () => {
       appearance: {
         char: animate.char || entity.appearance.char,
         color: `rgba(${r}, ${g}, ${b}, ${1 - framePercent})`,
-        background: "transparent",
+        background: 'transparent',
       },
       position: entity.position,
     });
@@ -604,12 +604,12 @@ Step 3: Set the frameTime and check if our animation has completed.
 const time = new Date();
 // set animation startTime
 if (!animate.startTime) {
-  entity.fireEvent("set-start-time", { time });
+  entity.fireEvent('set-start-time', { time });
 }
 const frameTime = time - animate.startTime;
 // end animation when complete
 if (frameTime > animate.duration) {
-  return entity.remove("Animate");
+  return entity.remove('Animate');
 }
 ```
 
@@ -734,30 +734,30 @@ In `./src/state/prefabs` add the following prefab:
 
 ```javascript
 export const ScrollLightning = {
-  name: "ScrollLightning",
-  inherit: ["Item"],
+  name: 'ScrollLightning',
+  inherit: ['Item'],
   components: [
     {
-      type: "Appearance",
-      properties: { char: "♪", color: "#DAA520" },
+      type: 'Appearance',
+      properties: { char: '♪', color: '#DAA520' },
     },
     {
-      type: "Description",
-      properties: { name: "scroll of lightning" },
+      type: 'Description',
+      properties: { name: 'scroll of lightning' },
     },
     {
-      type: "Effects",
+      type: 'Effects',
       properties: {
-        animate: { color: "#F7FF00" },
+        animate: { color: '#F7FF00' },
         events: [
           {
-            name: "take-damage",
+            name: 'take-damage',
             args: { amount: 25 },
           },
         ],
       },
     },
-    { type: "RequiresTarget", properties: { acquired: "RANDOM" } },
+    { type: 'RequiresTarget', properties: { acquired: 'RANDOM' } },
   ],
 };
 ```
@@ -769,7 +769,7 @@ In `src/state/components.js` go ahead and add the `RequiresTarget` component.
 ```javascript
 export class RequiresTarget extends Component {
   static properties = {
-    acquired: "RANDOM",
+    acquired: 'RANDOM',
   };
 }
 ```
@@ -895,11 +895,11 @@ First we need two more components, `Target` and `TargetingItem`. Go ahead and ad
 
 ```javascript
 export class Target extends Component {
-  static properties = { locId: "" };
+  static properties = { locId: '' };
 }
 
 export class TargetingItem extends Component {
-  static properties = { item: "<Entity>" };
+  static properties = { item: '<Entity>' };
 }
 ```
 
@@ -923,12 +923,12 @@ ecs.registerComponent(RequiresTarget);
 And we will of course need a targeting system. Add a new file at `./src/systems/targeting.js`
 
 ```javascript
-import ecs, { addLog } from "../state/ecs";
-import { readCacheSet } from "../state/cache";
+import world, { addLog } from '../state/ecs';
+import { readCacheSet } from '../state/cache';
 
-import { Target, TargetingItem } from "../state/components";
+import { Target, TargetingItem } from '../state/components';
 
-const targetingEntities = ecs.createQuery({
+const targetingEntities = world.createQuery({
   all: [Target, TargetingItem],
 });
 
@@ -936,18 +936,18 @@ export const targeting = () => {
   targetingEntities.get().forEach((entity) => {
     const { item } = entity.targetingItem;
 
-    if (item && item.has("Effects")) {
-      const targets = readCacheSet("entitiesAtLocation", entity.target.locId);
+    if (item && item.has('Effects')) {
+      const targets = readCacheSet('entitiesAtLocation', entity.target.locId);
 
       targets.forEach((eId) => {
         const target = ecs.getEntity(eId);
         item
-          .get("Effects")
-          .forEach((x) => target.add("ActiveEffects", { ...x.serialize() }));
+          .get('Effects')
+          .forEach((x) => target.add('ActiveEffects', { ...x.serialize() }));
       });
 
-      entity.remove("Target");
-      entity.remove("TargetingItem");
+      entity.remove('Target');
+      entity.remove('TargetingItem');
 
       addLog(`You use a ${item.description.name}`);
 
@@ -966,12 +966,12 @@ Start by adding scrolls to the dungeon floor in `./src/index.js`.
 ```diff
 times(10, () => {
   const tile = sample(openTiles);
-  ecs.createPrefab("HealthPotion").add(Position, { x: tile.x, y: tile.y });
+  world.createPrefab("HealthPotion").add(Position, { x: tile.x, y: tile.y });
 });
 
 +times(10, () => {
 +  const tile = sample(openTiles);
-+  ecs.createPrefab("ScrollLightning").add(Position, { x: tile.x, y: tile.y });
++  world.createPrefab("ScrollLightning").add(Position, { x: tile.x, y: tile.y });
 +});
 ```
 
@@ -982,11 +982,11 @@ import { fov } from "./systems/fov";
 import { movement } from "./systems/movement";
 import { render } from "./systems/render";
 +import { targeting } from "./systems/targeting";
-import ecs, { addLog } from "./state/ecs";
+import world, { addLog } from "./state/ecs";
 -import { Move, Position } from "./state/components";
 +import { IsInFov, Move, Position, Ai } from "./state/components";
 +
-+const enemiesInFOV = ecs.createQuery({ all: [IsInFov, Ai] });
++const enemiesInFOV = world.createQuery({ all: [IsInFov, Ai] });
 ```
 
 Next when an item is consumed we need to get a target if it requires one.
@@ -1046,31 +1046,31 @@ Let's start with a new scroll prefab in `./src/state/prefabs.js`:
 
 ```javascript
 export const ScrollParalyze = {
-  name: "ScrollParalyze",
-  inherit: ["Item"],
+  name: 'ScrollParalyze',
+  inherit: ['Item'],
   components: [
     {
-      type: "Appearance",
-      properties: { char: "♪", color: "#DAA520" },
+      type: 'Appearance',
+      properties: { char: '♪', color: '#DAA520' },
     },
     {
-      type: "Description",
-      properties: { name: "scroll of paralyze" },
+      type: 'Description',
+      properties: { name: 'scroll of paralyze' },
     },
     {
-      type: "Effects",
+      type: 'Effects',
       properties: {
-        animate: { color: "#FFB0B0" },
+        animate: { color: '#FFB0B0' },
         addComponents: [
           {
-            name: "Paralyzed",
+            name: 'Paralyzed',
             properties: {},
           },
         ],
         duration: 10,
       },
     },
-    { type: "RequiresTarget", properties: { acquired: "MANUAL" } },
+    { type: 'RequiresTarget', properties: { acquired: 'MANUAL' } },
   ],
 };
 ```
@@ -1229,12 +1229,12 @@ Finally we just need to add our new scrolls to the dungeon and implement manual 
 Go ahead and add the new scrolls to our dungeon in `./src/index.js`:
 
 ```diff
-  ecs.createPrefab("ScrollLightning").add(Position, { x: tile.x, y: tile.y });
+  world.createPrefab("ScrollLightning").add(Position, { x: tile.x, y: tile.y });
 });
 
 +times(10, () => {
 +  const tile = sample(openTiles);
-+  ecs.createPrefab("ScrollParalyze").add(Position, { x: tile.x, y: tile.y });
++  world.createPrefab("ScrollParalyze").add(Position, { x: tile.x, y: tile.y });
 +});
 
 fov(player);
@@ -1253,30 +1253,30 @@ if (process.env.NODE_ENV === "development") {
 with
 
 ```javascript
-const canvas = document.querySelector("#canvas");
+const canvas = document.querySelector('#canvas');
 
 canvas.onclick = (e) => {
   const [x, y] = pxToCell(e);
   const locId = toLocId({ x, y });
 
-  readCacheSet("entitiesAtLocation", locId).forEach((eId) => {
+  readCacheSet('entitiesAtLocation', locId).forEach((eId) => {
     const entity = ecs.getEntity(eId);
 
     // Only do this during development
-    if (process.env.NODE_ENV === "development") {
+    if (process.env.NODE_ENV === 'development') {
       console.log(
-        `${get(entity, "appearance.char", "?")} ${get(
+        `${get(entity, 'appearance.char', '?')} ${get(
           entity,
-          "description.name",
-          "?"
+          'description.name',
+          '?'
         )}`,
         entity.serialize()
       );
     }
 
-    if (gameState === "TARGETING") {
-      player.add("Target", { locId });
-      gameState = "GAME";
+    if (gameState === 'TARGETING') {
+      player.add('Target', { locId });
+      gameState = 'GAME';
       targeting();
       render(player);
     }
@@ -1353,33 +1353,33 @@ Start once again in `./src/state/prefabs.js` and add the definition for the fire
 
 ```javascript
 export const ScrollFireball = {
-  name: "ScrollFireball",
-  inherit: ["Item"],
+  name: 'ScrollFireball',
+  inherit: ['Item'],
   components: [
     {
-      type: "Appearance",
-      properties: { char: "♪", color: "#DAA520" },
+      type: 'Appearance',
+      properties: { char: '♪', color: '#DAA520' },
     },
     {
-      type: "Description",
-      properties: { name: "scroll of fireball" },
+      type: 'Description',
+      properties: { name: 'scroll of fireball' },
     },
     {
-      type: "Effects",
+      type: 'Effects',
       properties: {
-        animate: { color: "#FFA200", char: "^" },
+        animate: { color: '#FFA200', char: '^' },
         events: [
           {
-            name: "take-damage",
+            name: 'take-damage',
             args: { amount: 25 },
           },
         ],
       },
     },
     {
-      type: "RequiresTarget",
+      type: 'RequiresTarget',
       properties: {
-        acquired: "MANUAL",
+        acquired: 'MANUAL',
         aoeRange: 3,
       },
     },
@@ -1484,7 +1484,7 @@ All that's left now is to add some fireball scrolls to the dungeon!
 ```javascript
 times(10, () => {
   const tile = sample(openTiles);
-  ecs.createPrefab("ScrollFireball").add(Position, { x: tile.x, y: tile.y });
+  world.createPrefab('ScrollFireball').add(Position, { x: tile.x, y: tile.y });
 });
 ```
 

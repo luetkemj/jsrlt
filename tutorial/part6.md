@@ -154,7 +154,7 @@ if (tile.sprite === "WALL") {
 -  entity.add(Position, dungeon.tiles[key]);
 -  entity.add(Layer100);
 -  entity.add(Description, { name: "wall" });
-+  ecs.createPrefab("Wall").add(Position, dungeon.tiles[key]);
++  world.createPrefab("Wall").add(Position, dungeon.tiles[key]);
 }
 
 if (tile.sprite === "FLOOR") {
@@ -163,7 +163,7 @@ if (tile.sprite === "FLOOR") {
 -  entity.add(Position, dungeon.tiles[key]);
 -  entity.add(Layer100);
 -  entity.add(Description, { name: "floor" });
-+  ecs.createPrefab("Floor").add(Position, dungeon.tiles[key]);
++  world.createPrefab("Floor").add(Position, dungeon.tiles[key]);
 }
 ```
 
@@ -207,7 +207,7 @@ const dungeon = createDungeon({
   height: grid.map.height,
 });
 
-+const player = ecs.createPrefab("Player");
++const player = world.createPrefab("Player");
 player.add(Position, {
   x: dungeon.rooms[0].center.x,
   y: dungeon.rooms[0].center.y,
@@ -577,7 +577,7 @@ It should look like this:
 ```javascript
 import PF from 'pathfinding';
 import { some, times } from 'lodash';
-import ecs from '../state/ecs';
+import world from '../state/ecs';
 import cache, { readCacheSet } from '../state/cache';
 import { toCell } from './grid';
 import { grid } from './canvas';

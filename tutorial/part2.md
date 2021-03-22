@@ -715,7 +715,7 @@ If you check out the game now you should see a large grid of dots. Notice how yo
 One problem you may notice is that nothing stops the player from walking right off the edge of the map. We can handle that in our movement system. We just need to make a quick check that the goal location from an entity's move component is within our map's boundaries. Go ahead and make the following changes to `./src/systems/movement`
 
 ```diff
-import ecs from "../state/ecs";
+import world from "../state/ecs";
 +import { grid } from "../lib/canvas";
 import { Move } from "../state/components";
 
@@ -738,7 +738,7 @@ export const movement = () => {
     entity.position.x = mx;
     entity.position.y = my;
 
-    entity.remove(Move);
+    entity.remove(entity.move);
   });
 };
 ```

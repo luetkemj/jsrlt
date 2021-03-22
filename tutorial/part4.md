@@ -135,7 +135,7 @@ import {
 
 ```diff
 if (tile.sprite === "WALL") {
-  const entity = ecs.createEntity();
+  const entity = world.createEntity();
   entity.add(Appearance, { char: "#", color: "#AAA" });
   entity.add(IsBlocking);
 +  entity.add(Layer100);
@@ -143,7 +143,7 @@ if (tile.sprite === "WALL") {
 }
 
 if (tile.sprite === "FLOOR") {
-  const entity = ecs.createEntity();
+  const entity = world.createEntity();
   entity.add(Appearance, { char: "•", color: "#555" });
 +  entity.add(Layer100);
   entity.add(Position, dungeon.tiles[key]);
@@ -277,7 +277,7 @@ import { Move } from "../state/components";
 
 ```diff
 if (blockers.length) {
-  entity.remove(Move);
+  entity.remove(entity.move);
   return;
 }
 
@@ -657,7 +657,7 @@ const processUserInput = () => {
 Now that we're adding the Position component in index.js we can delete the line where we were doing it in `./src/state/ecs.js`:
 
 ```diff
-export const player = ecs.createEntity();
+export const player = world.createEntity();
 player.add(Appearance, { char: "@", color: "#fff" });
 -player.add(Position);
 player.add(Layer400);
@@ -668,7 +668,7 @@ We're on the home stretch! We just need a couple more edits to our render system
 In `./src/systems/render.js` make the following changes:
 
 ```diff
-import ecs from "../state/ecs";
+import world from "../state/ecs";
 import {
   Appearance,
 +  IsInFov,
@@ -679,17 +679,17 @@ import {
 ```
 
 ```diff
-const layer100Entities = ecs.createQuery({
+const layer100Entities = world.createQuery({
   all: [Position, Appearance, Layer100],
 +  any: [IsInFov, IsRevealed],
 });
 
-const layer300Entities = ecs.createQuery({
+const layer300Entities = world.createQuery({
   all: [Position, Appearance, Layer300],
 +  any: [IsInFov, IsRevealed],
 });
 
-const layer400Entities = ecs.createQuery({
+const layer400Entities = world.createQuery({
 -  all: [Position, Appearance, Layer400],
 +  all: [Position, Appearance, Layer400, IsInFov],
 });

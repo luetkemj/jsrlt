@@ -112,32 +112,32 @@ const dungeon = createDungeon({
 ```diff
   times(5, () => {
     const tile = sample(openTiles);
--    ecs.createPrefab("Goblin").add(Position, { x: tile.x, y: tile.y });
-+    ecs.createPrefab("Goblin").add(Position, tile);
+-    world.createPrefab("Goblin").add(Position, { x: tile.x, y: tile.y });
++    world.createPrefab("Goblin").add(Position, tile);
   });
 
   times(10, () => {
     const tile = sample(openTiles);
--    ecs.createPrefab("HealthPotion").add(Position, { x: tile.x, y: tile.y });
-+    ecs.createPrefab("HealthPotion").add(Position, tile);
+-    world.createPrefab("HealthPotion").add(Position, { x: tile.x, y: tile.y });
++    world.createPrefab("HealthPotion").add(Position, tile);
   });
 
   times(10, () => {
     const tile = sample(openTiles);
--    ecs.createPrefab("ScrollLightning").add(Position, { x: tile.x, y: tile.y });
-+    ecs.createPrefab("ScrollLightning").add(Position, tile);
+-    world.createPrefab("ScrollLightning").add(Position, { x: tile.x, y: tile.y });
++    world.createPrefab("ScrollLightning").add(Position, tile);
   });
 
   times(10, () => {
     const tile = sample(openTiles);
--    ecs.createPrefab("ScrollParalyze").add(Position, { x: tile.x, y: tile.y });
-+    ecs.createPrefab("ScrollParalyze").add(Position, tile);
+-    world.createPrefab("ScrollParalyze").add(Position, { x: tile.x, y: tile.y });
++    world.createPrefab("ScrollParalyze").add(Position, tile);
   });
 
   times(10, () => {
     const tile = sample(openTiles);
--    ecs.createPrefab("ScrollFireball").add(Position, { x: tile.x, y: tile.y });
-+    ecs.createPrefab("ScrollFireball").add(Position, tile);
+-    world.createPrefab("ScrollFireball").add(Position, { x: tile.x, y: tile.y });
++    world.createPrefab("ScrollFireball").add(Position, tile);
   });
 ```
 
@@ -187,7 +187,7 @@ if (gameState === "TARGETING") {
 
 ```diff
 import { random, times } from "lodash";
-import ecs from "../state/ecs";
+import world from "../state/ecs";
 import { rectangle, rectsIntersect } from "./grid";
 import { Position } from "../state/components";
 
@@ -293,13 +293,13 @@ export const createDungeon = ({
     const tile = dungeon.tiles[key];
 
     if (tile.sprite === "WALL") {
--      ecs.createPrefab("Wall").add(Position, dungeon.tiles[key]);
-+      ecs.createPrefab("Wall").add(Position, { ...dungeon.tiles[key], z });
+-      world.createPrefab("Wall").add(Position, dungeon.tiles[key]);
++      world.createPrefab("Wall").add(Position, { ...dungeon.tiles[key], z });
     }
 
     if (tile.sprite === "FLOOR") {
--      ecs.createPrefab("Floor").add(Position, dungeon.tiles[key]);
-+      ecs.createPrefab("Floor").add(Position, { ...dungeon.tiles[key], z });
+-      world.createPrefab("Floor").add(Position, dungeon.tiles[key]);
++      world.createPrefab("Floor").add(Position, { ...dungeon.tiles[key], z });
     }
   });
 
@@ -394,7 +394,7 @@ export const idToCell = (id) => {
 ```diff
 import PF from "pathfinding";
 import { some, times } from "lodash";
-import ecs from "../state/ecs";
+import world from "../state/ecs";
 -import cache, { readCacheSet } from "../state/cache";
 +import { readCache, readCacheSet } from "../state/cache";
 import { toCell } from "./grid";
@@ -462,12 +462,12 @@ export class Position extends Component {
 ### `./src/systems/ai.js`
 
 ```diff
-import ecs from "../state/ecs";
+import world from "../state/ecs";
 import { Ai, Description } from "../state/components";
 import { aStar } from "../lib/pathfinding";
 +import { readCache } from "../state/cache";
 
-const aiEntities = ecs.createQuery({
+const aiEntities = world.createQuery({
   all: [Ai, Description],
 });
 
@@ -614,31 +614,31 @@ With the big refactor out of the way let's go ahead and make our stair prefabs. 
 
 ```javascript
 export const StairsUp = {
-  name: "StairsUp",
-  inherit: ["Tile"],
+  name: 'StairsUp',
+  inherit: ['Tile'],
   components: [
     {
-      type: "Appearance",
-      properties: { char: "<", color: "#AAA" },
+      type: 'Appearance',
+      properties: { char: '<', color: '#AAA' },
     },
     {
-      type: "Description",
-      properties: { name: "set of stairs leading up" },
+      type: 'Description',
+      properties: { name: 'set of stairs leading up' },
     },
   ],
 };
 
 export const StairsDown = {
-  name: "StairsDown",
-  inherit: ["Tile"],
+  name: 'StairsDown',
+  inherit: ['Tile'],
   components: [
     {
-      type: "Appearance",
-      properties: { char: ">", color: "#AAA" },
+      type: 'Appearance',
+      properties: { char: '>', color: '#AAA' },
     },
     {
-      type: "Description",
-      properties: { name: "set of stairs leading down" },
+      type: 'Description',
+      properties: { name: 'set of stairs leading down' },
     },
   ],
 };
@@ -690,7 +690,7 @@ Next go ahead and delete the entire `initGame` function.
 -    height: grid.map.height,
 -  });
 -
--  player = ecs.createPrefab("Player");
+-  player = world.createPrefab("Player");
 -  player.add(Position, {
 -    x: dungeon.rooms[0].center.x,
 -    y: dungeon.rooms[0].center.y,
@@ -702,27 +702,27 @@ Next go ahead and delete the entire `initGame` function.
 -
 -  times(5, () => {
 -    const tile = sample(openTiles);
--    ecs.createPrefab("Goblin").add(Position, tile);
+-    world.createPrefab("Goblin").add(Position, tile);
 -  });
 -
 -  times(10, () => {
 -    const tile = sample(openTiles);
--    ecs.createPrefab("HealthPotion").add(Position, tile);
+-    world.createPrefab("HealthPotion").add(Position, tile);
 -  });
 -
 -  times(10, () => {
 -    const tile = sample(openTiles);
--    ecs.createPrefab("ScrollLightning").add(Position, tile);
+-    world.createPrefab("ScrollLightning").add(Position, tile);
 -  });
 -
 -  times(10, () => {
 -    const tile = sample(openTiles);
--    ecs.createPrefab("ScrollParalyze").add(Position, tile);
+-    world.createPrefab("ScrollParalyze").add(Position, tile);
 -  });
 -
 -  times(10, () => {
 -    const tile = sample(openTiles);
--    ecs.createPrefab("ScrollFireball").add(Position, tile);
+-    world.createPrefab("ScrollFireball").add(Position, tile);
 -  });
 -
 -  fov(player);
@@ -740,38 +740,38 @@ const createDungeonLevel = ({
   const dungeon = createDungeon({
     x: grid.map.x,
     y: grid.map.y,
-    z: readCache("z"),
+    z: readCache('z'),
     width: grid.map.width,
     height: grid.map.height,
   });
 
   const openTiles = Object.values(dungeon.tiles).filter(
-    (x) => x.sprite === "FLOOR"
+    (x) => x.sprite === 'FLOOR'
   );
 
   times(5, () => {
     const tile = sample(openTiles);
-    ecs.createPrefab("Goblin").add(Position, tile);
+    world.createPrefab('Goblin').add(Position, tile);
   });
 
   times(10, () => {
     const tile = sample(openTiles);
-    ecs.createPrefab("HealthPotion").add(Position, tile);
+    world.createPrefab('HealthPotion').add(Position, tile);
   });
 
   times(10, () => {
     const tile = sample(openTiles);
-    ecs.createPrefab("ScrollLightning").add(Position, tile);
+    world.createPrefab('ScrollLightning').add(Position, tile);
   });
 
   times(10, () => {
     const tile = sample(openTiles);
-    ecs.createPrefab("ScrollParalyze").add(Position, tile);
+    world.createPrefab('ScrollParalyze').add(Position, tile);
   });
 
   times(10, () => {
     const tile = sample(openTiles);
-    ecs.createPrefab("ScrollFireball").add(Position, tile);
+    world.createPrefab('ScrollFireball').add(Position, tile);
   });
 
   let stairsUp, stairsDown;
@@ -779,7 +779,7 @@ const createDungeonLevel = ({
   if (createStairsUp) {
     times(1, () => {
       const tile = sample(openTiles);
-      stairsUp = ecs.createPrefab("StairsUp");
+      stairsUp = world.createPrefab('StairsUp');
       stairsUp.add(Position, tile);
     });
   }
@@ -787,7 +787,7 @@ const createDungeonLevel = ({
   if (createStairsDown) {
     times(1, () => {
       const tile = sample(openTiles);
-      stairsDown = ecs.createPrefab("StairsDown");
+      stairsDown = world.createPrefab('StairsDown');
       stairsDown.add(Position, tile);
     });
   }
@@ -802,11 +802,11 @@ Next add another function called `goToDungeonLevel`
 
 ```javascript
 const goToDungeonLevel = (level) => {
-  const goingUp = readCache("z") < level;
-  const floor = readCache("floors")[level];
+  const goingUp = readCache('z') < level;
+  const floor = readCache('floors')[level];
 
   if (floor) {
-    addCache("z", level);
+    addCache('z', level);
     player.remove(Position);
     if (goingUp) {
       player.add(Position, toCell(floor.stairsDown));
@@ -814,7 +814,7 @@ const goToDungeonLevel = (level) => {
       player.add(Position, toCell(floor.stairsUp));
     }
   } else {
-    addCache("z", level);
+    addCache('z', level);
     const { stairsUp, stairsDown } = createDungeonLevel();
 
     addCache(`floors.${level}`, {
@@ -844,7 +844,7 @@ Now we can add back the `initGame` function, far smaller this time.
 const initGame = () => {
   const { stairsDown } = createDungeonLevel({ createStairsUp: false });
 
-  player = ecs.createPrefab("Player");
+  player = world.createPrefab('Player');
 
   addCache(`floors.${-1}`, {
     stairsDown: toLocId(stairsDown.position),
@@ -949,9 +949,9 @@ In `./src/systems/render.js` call drawText again at the end of the function `ren
 
 ```javascript
 drawText({
-  text: `Depth: ${Math.abs(readCache("z"))}`,
-  background: "black",
-  color: "#666",
+  text: `Depth: ${Math.abs(readCache('z'))}`,
+  background: 'black',
+  color: '#666',
   x: grid.playerHud.x,
   y: grid.playerHud.y + 2,
 });

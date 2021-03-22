@@ -95,7 +95,7 @@ Now for the kicking part. In `./src/systems/movement.js` when blockers exist - l
 if (blockers.length) {
 +  console.log('Kick!')
 
-  entity.remove(Move);
+  entity.remove(entity.move);
   return;
 }
 ```
