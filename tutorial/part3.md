@@ -24,7 +24,7 @@ export const createDungeon = ({ x, y, width, height }) => {
   const dungeon = rectangle(
     { x, y, width, height },
     {
-      sprite: "WALL",
+      sprite: 'WALL',
     }
   );
 
@@ -32,9 +32,9 @@ export const createDungeon = ({ x, y, width, height }) => {
   Object.keys(dungeon.tiles).forEach((key) => {
     const tile = dungeon.tiles[key];
 
-    if (tile.sprite === "WALL") {
+    if (tile.sprite === 'WALL') {
       const entity = world.createEntity();
-      entity.add(Appearance, { char: "#", color: "#555" });
+      entity.add(Appearance, { char: '#', color: '#555' });
       entity.add(Position, dungeon.tiles[key]);
     }
   });
@@ -124,7 +124,7 @@ We use rectangle again to create a room within our map. This time setting the sp
 ```javascript
 const room = rectangle(
   { x: 30, y: 10, width: 10, height: 10, hasWalls: true },
-  { sprite: "FLOOR" }
+  { sprite: 'FLOOR' }
 );
 ```
 
@@ -137,9 +137,9 @@ dungeon.tiles = { ...dungeon.tiles, ...room.tiles };
 Finally we add another conditional statement to handle floor tiles.
 
 ```javascript
-if (tile.sprite === "FLOOR") {
+if (tile.sprite === 'FLOOR') {
   const entity = world.createEntity();
-  entity.add(Appearance, { char: "•", color: "#555" });
+  entity.add(Appearance, { char: '•', color: '#555' });
   entity.add(Position, dungeon.tiles[key]);
 }
 ```
@@ -218,10 +218,10 @@ We need to import a new function from lodash called `times`. Times is a great li
 We'll go over the diff in a second but with our new code to generate multiple rooms `./src/lib/dungeon.js` should now look like this:
 
 ```javascript
-import { random, times } from "lodash";
-import world from "../state/ecs";
-import { rectangle, rectsIntersect } from "./grid";
-import { Appearance, Position } from "../state/components";
+import { random, times } from 'lodash';
+import world from '../state/ecs';
+import { rectangle, rectsIntersect } from './grid';
+import { Appearance, Position } from '../state/components';
 
 export const createDungeon = ({
   x,
@@ -236,7 +236,7 @@ export const createDungeon = ({
   const dungeon = rectangle(
     { x, y, width, height },
     {
-      sprite: "WALL",
+      sprite: 'WALL',
     }
   );
 
@@ -252,7 +252,7 @@ export const createDungeon = ({
     // create a candidate room
     const candidate = rectangle(
       { x: rx, y: ry, width: rw, height: rh, hasWalls: true },
-      { sprite: "FLOOR" }
+      { sprite: 'FLOOR' }
     );
 
     // test if candidate is overlapping with any existing rooms
@@ -268,15 +268,15 @@ export const createDungeon = ({
   Object.keys(dungeon.tiles).forEach((key) => {
     const tile = dungeon.tiles[key];
 
-    if (tile.sprite === "WALL") {
+    if (tile.sprite === 'WALL') {
       const entity = world.createEntity();
-      entity.add(Appearance, { char: "#", color: "#AAA" });
+      entity.add(Appearance, { char: '#', color: '#AAA' });
       entity.add(Position, dungeon.tiles[key]);
     }
 
-    if (tile.sprite === "FLOOR") {
+    if (tile.sprite === 'FLOOR') {
       const entity = world.createEntity();
-      entity.add(Appearance, { char: "•", color: "#555" });
+      entity.add(Appearance, { char: '•', color: '#555' });
       entity.add(Position, dungeon.tiles[key]);
     }
   });
@@ -300,7 +300,7 @@ times(maxRoomCount, () => {
   // create a candidate room
   const candidate = rectangle(
     { x: rx, y: ry, width: rw, height: rh, hasWalls: true },
-    { sprite: "FLOOR" }
+    { sprite: 'FLOOR' }
   );
 
   // test if candidate is overlapping with any existing rooms
@@ -329,7 +329,7 @@ function digHorizontalPassage(x1, x2, y) {
   let x = start;
 
   while (x < end) {
-    tiles[`${x},${y}`] = { x, y, sprite: "FLOOR" };
+    tiles[`${x},${y}`] = { x, y, sprite: 'FLOOR' };
     x++;
   }
 
@@ -343,7 +343,7 @@ function digVerticalPassage(y1, y2, x) {
   let y = start;
 
   while (y < end) {
-    tiles[`${x},${y}`] = { x, y, sprite: "FLOOR" };
+    tiles[`${x},${y}`] = { x, y, sprite: 'FLOOR' };
     y++;
   }
 
@@ -474,7 +474,7 @@ Finally in movement we need to check if the location we want to move to has an e
 
 +    // check for blockers
 +    const blockers = [];
-+    for (const e of world._entities.all) {
++    for (const e of world.getEntities()) {
 +      if (e[1].position.x === mx && e[1].position.y === my && e[1].isBlocking) {
 +        blockers.push(e);
 +      }
@@ -494,9 +494,9 @@ Typically I build an entitiesAtLocation cache that tracks entity ids at each loc
 
 ```javascript
 {
-  "0,0", ["entityid1"];
-  "0,1", ["entityid2", "entityid4"];
-  "0,2", ["entityid3"];
+  '0,0', ['entityid1'];
+  '0,1', ['entityid2', 'entityid4'];
+  '0,2', ['entityid3'];
 }
 ```
 

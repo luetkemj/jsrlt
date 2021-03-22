@@ -12,89 +12,89 @@ Instead of creating entities on the fly we are going to use prefabs instead. Pre
 
 In the end prefabs are just composable blueprints for entities. In geotic they are modeled after [this talk by Thomas Biskup](https://www.youtube.com/watch?v=fGLJC5UY2o4&t=1534s). Let's go ahead and create some so you can see how they consolidate our code and make it easier to maintain in the long run.
 
-Create a new file called `prefabs.js` at `./src/state/prefab.js`. Make it look like this:
+Create a new file called `prefabs.js` at `./src/state/prefabs.js`. Make it look like this:
 
 ```javascript
 // Base
 export const Tile = {
-  name: "Tile",
+  name: 'Tile',
   components: [
-    { type: "Appearance" },
-    { type: "Description" },
-    { type: "Layer100" },
+    { type: 'Appearance' },
+    { type: 'Description' },
+    { type: 'Layer100' },
   ],
 };
 
 export const Being = {
-  name: "Being",
+  name: 'Being',
   components: [
-    { type: "Appearance" },
-    { type: "Description" },
-    { type: "IsBlocking" },
-    { type: "Layer400" },
+    { type: 'Appearance' },
+    { type: 'Description' },
+    { type: 'IsBlocking' },
+    { type: 'Layer400' },
   ],
 };
 
 // Complex
 export const Wall = {
-  name: "Wall",
-  inherit: ["Tile"],
+  name: 'Wall',
+  inherit: ['Tile'],
   components: [
-    { type: "IsBlocking" },
-    { type: "IsOpaque" },
+    { type: 'IsBlocking' },
+    { type: 'IsOpaque' },
     {
-      type: "Appearance",
-      properties: { char: "#", color: "#AAA" },
+      type: 'Appearance',
+      properties: { char: '#', color: '#AAA' },
     },
     {
-      type: "Description",
-      properties: { name: "wall" },
+      type: 'Description',
+      properties: { name: 'wall' },
     },
   ],
 };
 
 export const Floor = {
-  name: "Floor",
-  inherit: ["Tile"],
+  name: 'Floor',
+  inherit: ['Tile'],
   components: [
     {
-      type: "Appearance",
-      properties: { char: "•", color: "#555" },
+      type: 'Appearance',
+      properties: { char: '•', color: '#555' },
     },
     {
-      type: "Description",
-      properties: { name: "floor" },
+      type: 'Description',
+      properties: { name: 'floor' },
     },
   ],
 };
 
 export const Player = {
-  name: "Player",
-  inherit: ["Being"],
+  name: 'Player',
+  inherit: ['Being'],
   components: [
     {
-      type: "Appearance",
-      properties: { char: "@", color: "#FFF" },
+      type: 'Appearance',
+      properties: { char: '@', color: '#FFF' },
     },
     {
-      type: "Description",
-      properties: { name: "You" },
+      type: 'Description',
+      properties: { name: 'You' },
     },
   ],
 };
 
 export const Goblin = {
-  name: "Goblin",
-  inherit: ["Being"],
+  name: 'Goblin',
+  inherit: ['Being'],
   components: [
-    { type: "Ai" },
+    { type: 'Ai' },
     {
-      type: "Appearance",
-      properties: { char: "g", color: "green" },
+      type: 'Appearance',
+      properties: { char: 'g', color: 'green' },
     },
     {
-      type: "Description",
-      properties: { name: "goblin" },
+      type: 'Description',
+      properties: { name: 'goblin' },
     },
   ],
 };
@@ -147,7 +147,7 @@ function digHorizontalPassage(x1, x2, y) {
 
 ```diff
 if (tile.sprite === "WALL") {
--  const entity = ecs.createEntity();
+-  const entity = world.createEntity();
 -  entity.add(Appearance, { char: "#", color: "#AAA" });
 -  entity.add(IsBlocking);
 -  entity.add(IsOpaque);
@@ -158,7 +158,7 @@ if (tile.sprite === "WALL") {
 }
 
 if (tile.sprite === "FLOOR") {
--  const entity = ecs.createEntity();
+-  const entity = world.createEntity();
 -  entity.add(Appearance, { char: "•", color: "#555" });
 -  entity.add(Position, dungeon.tiles[key]);
 -  entity.add(Layer100);
@@ -175,7 +175,7 @@ We won't need to create our player entity in `./src/state/ecs.js` anymore so we 
 ecs.registerPrefab(Goblin);
 ecs.registerPrefab(Player);
 
--export const player = ecs.createEntity();
+-export const player = world.createEntity();
 -player.add(Appearance, { char: "@", color: "#fff" });
 -player.add(Layer400);
 -player.add(Description, { name: "You" });
@@ -187,8 +187,8 @@ Next in `./src/index.js`:
 
 ```diff
 import { render } from "./systems/render";
--import ecs, { player } from "./state/ecs";
-+import ecs from "./state/ecs";
+-import world, { player } from "./state/ecs";
++import world from "./state/ecs";
 import {
 -  Ai,
 -  Appearance,
@@ -218,14 +218,14 @@ player.add(Position, {
 times(5, () => {
   const tile = sample(openTiles);
 -
--  const goblin = ecs.createEntity();
+-  const goblin = world.createEntity();
 -  goblin.add(Ai);
 -  goblin.add(Appearance, { char: "g", color: "green" });
 -  goblin.add(Description, { name: "goblin" });
 -  goblin.add(IsBlocking);
 -  goblin.add(Layer400);
 -  goblin.add(Position, { x: tile.x, y: tile.y });
-+  ecs.createPrefab("Goblin").add(Position, { x: tile.x, y: tile.y });
++  world.createPrefab("Goblin").add(Position, { x: tile.x, y: tile.y });
 });
 ```
 
@@ -233,15 +233,15 @@ The last big of refactoring we need to do is in `./systems/fov.js`. We had been 
 
 ```diff
 import { readCacheSet } from "../state/cache";
--import ecs, { player } from "../state/ecs";
-+import ecs from "../state/ecs";
+-import world, { player } from "../state/ecs";
++import world from "../state/ecs";
 import { grid } from "../lib/canvas";
 import createFOV from "../lib/fov";
 import { IsInFov, IsOpaque, IsRevealed } from "../state/components";
 ```
 
 ```diff
-const opaqueEntities = ecs.createQuery({
+const opaqueEntities = world.createQuery({
   all: [IsOpaque],
 });
 
@@ -409,21 +409,21 @@ Then at the bottom the file add:
 
 ```javascript
 // Only do this during development
-if (process.env.NODE_ENV === "development") {
-  const canvas = document.querySelector("#canvas");
+if (process.env.NODE_ENV === 'development') {
+  const canvas = document.querySelector('#canvas');
 
   canvas.onclick = (e) => {
     const [x, y] = pxToCell(e);
     const locId = toLocId({ x, y });
 
-    readCacheSet("entitiesAtLocation", locId).forEach((eId) => {
-      const entity = ecs.getEntity(eId);
+    readCacheSet('entitiesAtLocation', locId).forEach((eId) => {
+      const entity = world.getEntity(eId);
 
       console.log(
-        `${get(entity, "appearance.char", "?")} ${get(
+        `${get(entity, 'appearance.char', '?')} ${get(
           entity,
-          "description.name",
-          "?"
+          'description.name',
+          '?'
         )}`,
         entity.serialize()
       );
@@ -475,6 +475,12 @@ export const movement = () => {
 ```
 
 Next, instead of kicking, when encountering a blocker, we can attack instead!
+First we'll need to import our Health and Defense Components
+
+```diff
+-import { Move } from "../state/components";
++import { Defense, Health, Move } from "../state/components";
+```
 
 ```diff
 if (blockers.length) {
@@ -482,14 +488,14 @@ if (blockers.length) {
 -    const attacker =
 -      (entity.description && entity.description.name) || "something";
 -    const target =
--      (ecs.getEntity(eId).description &&
--        ecs.getEntity(eId).description.name) ||
+-      (world.getEntity(eId).description &&
+-        world.getEntity(eId).description.name) ||
 -      "something";
 -    console.log(`${attacker} kicked a ${target}!`);
 -  });
 +  blockers.forEach((eId) => {
-+    const target = ecs.getEntity(eId);
-+    if (target.has("Health") && target.has("Defense")) {
++    const target = world.getEntity(eId);
++    if (target.has(Health) && target.has(Defense)) {
 +      attack(entity, target);
 +    } else {
 +      console.log(
@@ -497,7 +503,7 @@ if (blockers.length) {
 +      );
 +    }
 +  });
-  entity.remove(Move);
+  entity.remove(entity.move);
   return;
 }
 ```
@@ -512,12 +518,19 @@ Right after the attack function, add kill:
 
 ```javascript
 const kill = (entity) => {
-  entity.appearance.char = "%";
-  entity.remove("Ai");
-  entity.remove("IsBlocking");
-  entity.remove("Layer400");
-  entity.add("Layer300");
+  entity.appearance.char = '%';
+  entity.remove(entity.ai);
+  entity.remove(entity.isBlocking);
+  entity.remove(entity.layer400);
+  entity.add(Layer300);
 };
+```
+
+Also, don't forget to import `Layer300` from `../state/components`.
+
+```diff
+-import { Defense, Health, Move } from "../state/components";
++import { Defense, Health, Layer300, Move } from "../state/components";
 ```
 
 Nothing crazy happening here. Just changing the char to a corpse (%) and removing some components. Without "Ai" our dead goblin doesn't get a turn anymore. We also want to remove "IsBlocking" so and change the layer from the main layer our @ inhabits to the item layer.
@@ -529,7 +542,7 @@ Finally, let's update our attack function to kill the target if it's health is a
 ```javascript
 const attack = (entity, target) => {
   const damage = entity.power.current - target.defense.current;
-  target.fireEvent("take-damage", { amount: damage });
+  target.fireEvent('take-damage', { amount: damage });
 
   if (target.health.current <= 0) {
     kill(target);
@@ -562,12 +575,12 @@ There is a bit of setup required each time you want to calculate a path. The alg
 It should look like this:
 
 ```javascript
-import PF from "pathfinding";
-import { some, times } from "lodash";
-import ecs from "../state/ecs";
-import cache, { readCacheSet } from "../state/cache";
-import { toCell } from "./grid";
-import { grid } from "./canvas";
+import PF from 'pathfinding';
+import { some, times } from 'lodash';
+import ecs from '../state/ecs';
+import cache, { readCacheSet } from '../state/cache';
+import { toCell } from './grid';
+import { grid } from './canvas';
 
 const baseMatrix = [];
 times(grid.height, () => baseMatrix.push(new Array(grid.width).fill(0)));
@@ -579,7 +592,7 @@ export const aStar = (start, goal) => {
 
   locIds.forEach((locId) => {
     if (
-      some([...readCacheSet("entitiesAtLocation", locId)], (eId) => {
+      some([...readCacheSet('entitiesAtLocation', locId)], (eId) => {
         return ecs.getEntity(eId).isBlocking;
       })
     ) {
@@ -604,14 +617,15 @@ export const aStar = (start, goal) => {
 };
 ```
 
-Now let's update our ai system so the goblins can actually path to the player instead of just pondering the meaning of life. In `./src/systems/ai.js` import the aStar lib that we just created.
+Now let's update our ai system so the goblins can actually path to the player instead of just pondering the meaning of life. In `./src/systems/ai.js` import the aStar lib that we just created as well as our `Move` component.
 
 ```diff
-import ecs from "../state/ecs";
-import { Ai, Description } from "../state/components";
+import world from "../state/ecs";
+-import { Ai, Description } from "../state/components";
++import { Ai, Description, Move } from "../state/components";
 +import { aStar } from "../lib/pathfinding";
 
-const aiEntities = ecs.createQuery({
+const aiEntities = world.createQuery({
 ```
 
 Next add a moveToTarget function just after the aiEntities query.
@@ -621,7 +635,7 @@ const moveToTarget = (entity, target) => {
   const path = aStar(entity.position, target.position);
   if (path.length) {
     const newLoc = path[1];
-    entity.add("Move", { x: newLoc[0], y: newLoc[1], relative: false });
+    entity.add(Move, { x: newLoc[0], y: newLoc[1], relative: false });
   }
 };
 ```
@@ -631,13 +645,18 @@ This function takes an entity and a target and generates a path using aStar from
 Now we can just replace the console.log in our existing ai with a call to our new function moveToTarget.
 
 ```diff
+-import { Ai, Description, Move } from "../state/components";
++import { Ai, Description, IsInFov, Move } from "../state/components";
+```
+
+```diff
 -export const ai = () => {
 +export const ai = (player) => {
   aiEntities.get().forEach((entity) => {
 -    console.log(
 -      `${entity.description.name} ${entity.id} ponders it's existence.`
 -    );
-+    if (entity.has("IsInFov")) {
++    if (entity.has(IsInFov)) {
 +      moveToTarget(entity, player);
 +    }
   });
@@ -703,13 +722,24 @@ Don't forget to register it in `./src/state/ecs.js`!
 Next in `./src/systems/movement.js` we just need to add the `IsDead` component to our kill function when an entity dies.
 
 ```diff
+-import { Ai, Defense, Health, IsBlocking, Layer300, Move } from "../state/components";
++import { Ai, Defense, Health, IsBlocking, IsDead, Layer300, Move } from "../state/components";
+```
+
+Our Player doesn't have the Ai or IsBlocking component, so we need to wrap the removal into a condition.
+
+```diff
 const kill = (entity) => {
   entity.appearance.char = "%";
-  entity.remove("Ai");
-  entity.remove("IsBlocking");
-+  entity.add("IsDead");
-  entity.remove("Layer400");
-  entity.add("Layer300");
+-  entity.remove(entity.ai);
+-  entity.remove(entity.isBlocking);
++  if (entity.has(Ai) && entity.has(IsBlocking)) {
++    entity.remove(entity.ai);
++    entity.remove(entity.isBlocking);
++  }
++  entity.add(IsDead);
+  entity.remove(entity.layer400);
+  entity.add(Layer300);
 };
 ```
 
