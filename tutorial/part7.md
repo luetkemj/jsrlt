@@ -45,7 +45,7 @@ Next we'll add a new function called `drawText`. This new function will accept a
 export const drawText = (template) => {
   const textToRender = template.text;
 
-  textToRender.split("").forEach((char, index) => {
+  textToRender.split('').forEach((char, index) => {
     const options = { ...template };
     const character = {
       appearance: {
@@ -115,15 +115,15 @@ If you try our the game now you should see the player name in the top left of th
 
 Let's add a health bar just below it.
 
-To do that we'll render a grayed version below a colored version that will become shorter as our health diminishes. As our @ loses health this will create the illusion that our hearts are changing from ref to gray.
+To do that we'll render a grayed version below a colored version that will become shorter as our health diminishes. As our @ loses health this will create the illusion that our hearts are changing from red to gray.
 
 Render the gray version of our health bar
 
 ```javascript
 drawText({
-  text: "♥".repeat(grid.playerHud.width),
-  background: "black",
-  color: "#333",
+  text: '♥'.repeat(grid.playerHud.width),
+  background: 'black',
+  color: '#333',
   x: grid.playerHud.x,
   y: grid.playerHud.y + 1,
 });
@@ -136,9 +136,9 @@ const hp = player.health.current / player.health.max;
 
 if (hp > 0) {
   drawText({
-    text: "♥".repeat(hp * grid.playerHud.width),
-    background: "black",
-    color: "red",
+    text: '♥'.repeat(hp * grid.playerHud.width),
+    background: 'black',
+    color: 'red',
     x: grid.playerHud.x,
     y: grid.playerHud.y + 1,
   });
@@ -161,17 +161,18 @@ ecs.registerPrefab(Player);
 +  messageLog.unshift(text);
 +};
 
-export default ecs;
+const world = ecs.createWorld();
+export default world;
 ```
 
 Now in our movement system `./src/systems/movement.js` we can import our `addLog` function and change all of our console logs to addLogs.
 
 ```diff
--import ecs from "../state/ecs";
-+import ecs, { addLog } from "../state/ecs";
-import { addCacheSet, deleteCacheSet, readCacheSet } from "../state/cache";
-import { grid } from "../lib/canvas";
-import { Move } from "../state/components";
+import { grid } from '../lib/canvas';
+import { addCacheSet, deleteCacheSet, readCacheSet } from '../state/cache';
+import { Ai, Defense, Health, IsBlocking, IsDead, Layer300, Move } from '../state/components';
+-import world from '../state/ecs'
++import world, { addLog } from '../state/ecs'
 ```
 
 ```diff
@@ -211,7 +212,7 @@ We are going to explicity render the first three messages of our log. As new mes
 First import `messageLog` to our render system:
 
 ```javascript
-import { messageLog } from "../state/ecs";
+import { messageLog } from '../state/ecs';
 ```
 
 Then, right after our health bar add the following:
@@ -219,24 +220,24 @@ Then, right after our health bar add the following:
 ```javascript
 drawText({
   text: messageLog[2],
-  background: "#000",
-  color: "#666",
+  background: '#000',
+  color: '#666',
   x: grid.messageLog.x,
   y: grid.messageLog.y,
 });
 
 drawText({
   text: messageLog[1],
-  background: "#000",
-  color: "#aaa",
+  background: '#000',
+  color: '#aaa',
   x: grid.messageLog.x,
   y: grid.messageLog.y + 1,
 });
 
 drawText({
   text: messageLog[0],
-  background: "#000",
-  color: "#fff",
+  background: '#000',
+  color: '#fff',
   x: grid.messageLog.x,
   y: grid.messageLog.y + 2,
 });
@@ -270,15 +271,15 @@ const clearInfoBar = () =>
     text: ` `.repeat(grid.infoBar.width),
     x: grid.infoBar.x,
     y: grid.infoBar.y,
-    background: "black",
+    background: 'black',
   });
 
-const canvas = document.querySelector("#canvas");
+const canvas = document.querySelector('#canvas');
 canvas.onmousemove = throttle((e) => {
   const [x, y] = pxToCell(e);
   const locId = toLocId({ x, y });
 
-  const esAtLoc = readCacheSet("entitiesAtLocation", locId) || [];
+  const esAtLoc = readCacheSet('entitiesAtLocation', locId) || [];
   const entitiesAtLoc = [...esAtLoc];
 
   clearInfoBar();
@@ -286,15 +287,15 @@ canvas.onmousemove = throttle((e) => {
   if (entitiesAtLoc) {
     entitiesAtLoc
       .filter((eId) => {
-        const entity = ecs.getEntity(eId);
+        const entity = world.getEntity(eId);
         return (
-          layer100Entities.isMatch(entity) ||
-          layer300Entities.isMatch(entity) ||
-          layer400Entities.isMatch(entity)
+          layer100Entities.matches(entity) ||
+          layer300Entities.matches(entity) ||
+          layer400Entities.matches(entity)
         );
       })
       .forEach((eId) => {
-        const entity = ecs.getEntity(eId);
+        const entity = world.getEntity(eId);
         clearInfoBar();
 
         if (entity.isInFov) {
@@ -302,16 +303,16 @@ canvas.onmousemove = throttle((e) => {
             text: `You see a ${entity.description.name}(${entity.appearance.char}) here.`,
             x: grid.infoBar.x,
             y: grid.infoBar.y,
-            color: "white",
-            background: "black",
+            color: 'white',
+            background: 'black',
           });
         } else {
           drawText({
             text: `You remember seeing a ${entity.description.name}(${entity.appearance.char}) here.`,
             x: grid.infoBar.x,
             y: grid.infoBar.y,
-            color: "white",
-            background: "black",
+            color: 'white',
+            background: 'black',
           });
         }
       });
@@ -329,14 +330,14 @@ const clearInfoBar = () =>
     text: ` `.repeat(grid.infoBar.width),
     x: grid.infoBar.x,
     y: grid.infoBar.y,
-    background: "black",
+    background: 'black',
   });
 ```
 
 Next we just grab a reference to the canvas dom element so we can add an `onmousemove` listener to it.
 
 ```javascript
-const canvas = document.querySelector("#canvas");
+const canvas = document.querySelector('#canvas');
 ```
 
 We throttle the `onmousemove` event here to prevent it from being called as fast as possible to help with performance. The code between the braces should only run once every 100ms while the mouse is moving over the canvas.
@@ -353,7 +354,7 @@ Once in the braces we use the mouse event (e) to calculate our location on the g
 const [x, y] = pxToCell(e);
 const locId = toLocId({ x, y });
 
-const esAtLoc = readCacheSet("entitiesAtLocation", locId) || [];
+const esAtLoc = readCacheSet('entitiesAtLocation', locId) || [];
 const entitiesAtLoc = [...esAtLoc];
 
 clearInfoBar();
@@ -365,15 +366,15 @@ If there are any entities at the current location we use our layer queries to fi
 if (entitiesAtLoc) {
   entitiesAtLoc
     .filter((eId) => {
-      const entity = ecs.getEntity(eId);
+      const entity = world.getEntity(eId);
       return (
-        layer100Entities.isMatch(entity) ||
-        layer300Entities.isMatch(entity) ||
-        layer400Entities.isMatch(entity)
+        layer100Entities.matches(entity) ||
+        layer300Entities.matches(entity) ||
+        layer400Entities.matches(entity)
       );
     })
     .forEach((eId) => {
-      const entity = ecs.getEntity(eId);
+      const entity = world.getEntity(eId);
       clearInfoBar();
 
       if (entity.isInFov) {
@@ -381,16 +382,16 @@ if (entitiesAtLoc) {
           text: `You see a ${entity.description.name}(${entity.appearance.char}) here.`,
           x: grid.infoBar.x,
           y: grid.infoBar.y,
-          color: "white",
-          background: "black",
+          color: 'white',
+          background: 'black',
         });
       } else {
         drawText({
           text: `You remember seeing a ${entity.description.name}(${entity.appearance.char}) here.`,
           x: grid.infoBar.x,
           y: grid.infoBar.y,
-          color: "white",
-          background: "black",
+          color: 'white',
+          background: 'black',
         });
       }
     });
