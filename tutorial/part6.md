@@ -17,84 +17,84 @@ Create a new file called `prefabs.js` at `./src/state/prefabs.js`. Make it look 
 ```javascript
 // Base
 export const Tile = {
-  name: 'Tile',
+  name: "Tile",
   components: [
-    { type: 'Appearance' },
-    { type: 'Description' },
-    { type: 'Layer100' },
+    { type: "Appearance" },
+    { type: "Description" },
+    { type: "Layer100" },
   ],
 };
 
 export const Being = {
-  name: 'Being',
+  name: "Being",
   components: [
-    { type: 'Appearance' },
-    { type: 'Description' },
-    { type: 'IsBlocking' },
-    { type: 'Layer400' },
+    { type: "Appearance" },
+    { type: "Description" },
+    { type: "IsBlocking" },
+    { type: "Layer400" },
   ],
 };
 
 // Complex
 export const Wall = {
-  name: 'Wall',
-  inherit: ['Tile'],
+  name: "Wall",
+  inherit: ["Tile"],
   components: [
-    { type: 'IsBlocking' },
-    { type: 'IsOpaque' },
+    { type: "IsBlocking" },
+    { type: "IsOpaque" },
     {
-      type: 'Appearance',
-      properties: { char: '#', color: '#AAA' },
+      type: "Appearance",
+      properties: { char: "#", color: "#AAA" },
     },
     {
-      type: 'Description',
-      properties: { name: 'wall' },
+      type: "Description",
+      properties: { name: "wall" },
     },
   ],
 };
 
 export const Floor = {
-  name: 'Floor',
-  inherit: ['Tile'],
+  name: "Floor",
+  inherit: ["Tile"],
   components: [
     {
-      type: 'Appearance',
-      properties: { char: '•', color: '#555' },
+      type: "Appearance",
+      properties: { char: "•", color: "#555" },
     },
     {
-      type: 'Description',
-      properties: { name: 'floor' },
+      type: "Description",
+      properties: { name: "floor" },
     },
   ],
 };
 
 export const Player = {
-  name: 'Player',
-  inherit: ['Being'],
+  name: "Player",
+  inherit: ["Being"],
   components: [
     {
-      type: 'Appearance',
-      properties: { char: '@', color: '#FFF' },
+      type: "Appearance",
+      properties: { char: "@", color: "#FFF" },
     },
     {
-      type: 'Description',
-      properties: { name: 'You' },
+      type: "Description",
+      properties: { name: "You" },
     },
   ],
 };
 
 export const Goblin = {
-  name: 'Goblin',
-  inherit: ['Being'],
+  name: "Goblin",
+  inherit: ["Being"],
   components: [
-    { type: 'Ai' },
+    { type: "Ai" },
     {
-      type: 'Appearance',
-      properties: { char: 'g', color: 'green' },
+      type: "Appearance",
+      properties: { char: "g", color: "green" },
     },
     {
-      type: 'Description',
-      properties: { name: 'goblin' },
+      type: "Description",
+      properties: { name: "goblin" },
     },
   ],
 };
@@ -409,21 +409,21 @@ Then at the bottom the file add:
 
 ```javascript
 // Only do this during development
-if (process.env.NODE_ENV === 'development') {
-  const canvas = document.querySelector('#canvas');
+if (process.env.NODE_ENV === "development") {
+  const canvas = document.querySelector("#canvas");
 
   canvas.onclick = (e) => {
     const [x, y] = pxToCell(e);
     const locId = toLocId({ x, y });
 
-    readCacheSet('entitiesAtLocation', locId).forEach((eId) => {
+    readCacheSet("entitiesAtLocation", locId).forEach((eId) => {
       const entity = world.getEntity(eId);
 
       console.log(
-        `${get(entity, 'appearance.char', '?')} ${get(
+        `${get(entity, "appearance.char", "?")} ${get(
           entity,
-          'description.name',
-          '?'
+          "description.name",
+          "?"
         )}`,
         entity.serialize()
       );
@@ -518,7 +518,7 @@ Right after the attack function, add kill:
 
 ```javascript
 const kill = (entity) => {
-  entity.appearance.char = '%';
+  entity.appearance.char = "%";
   entity.remove(entity.ai);
   entity.remove(entity.isBlocking);
   entity.remove(entity.layer400);
@@ -542,7 +542,7 @@ Finally, let's update our attack function to kill the target if it's health is a
 ```javascript
 const attack = (entity, target) => {
   const damage = entity.power.current - target.defense.current;
-  target.fireEvent('take-damage', { amount: damage });
+  target.fireEvent("take-damage", { amount: damage });
 
   if (target.health.current <= 0) {
     kill(target);
@@ -575,12 +575,12 @@ There is a bit of setup required each time you want to calculate a path. The alg
 It should look like this:
 
 ```javascript
-import PF from 'pathfinding';
-import { some, times } from 'lodash';
-import world from '../state/ecs';
-import cache, { readCacheSet } from '../state/cache';
-import { toCell } from './grid';
-import { grid } from './canvas';
+import PF from "pathfinding";
+import { some, times } from "lodash";
+import world from "../state/ecs";
+import cache, { readCacheSet } from "../state/cache";
+import { toCell } from "./grid";
+import { grid } from "./canvas";
 
 const baseMatrix = [];
 times(grid.height, () => baseMatrix.push(new Array(grid.width).fill(0)));
@@ -592,7 +592,7 @@ export const aStar = (start, goal) => {
 
   locIds.forEach((locId) => {
     if (
-      some([...readCacheSet('entitiesAtLocation', locId)], (eId) => {
+      some([...readCacheSet("entitiesAtLocation", locId)], (eId) => {
         return ecs.getEntity(eId).isBlocking;
       })
     ) {
@@ -678,7 +678,7 @@ Go ahead and give it a shot! Not working? Yeah, there's a bug. Try and figure it
 
 ---
 
-Did you figure it out? It's ok if you didn't - this was a tricky one that took me a bit to understand. It goes back to a decision we made in part 2. Our Move component expects a relative position. We take something like `{ x: 0, y: -1 }` and add it to an entities current position to calculate the new position. But our path returns absolute positions like `{ x: 43, y: 18 }` - our goblins are trying to teleport into solid rock somewhere on our map and our movement system is failing back to "goblin bump into a wall" bacause they are trying to move into a blocking location with a wall. The simplest solution here is to modify our `Move` component and `movement` system to account for both relative and absolute positions. Let's add a flag in our Move component to let the system know what sort of position it's dealing with. In `./src/state/components.js` add a property called `relative` like this:
+Did you figure it out? It's ok if you didn't - this was a tricky one that took me a bit to understand. It goes back to a decision we made in part 2. Our Move component expects a relative position. We take something like `{ x: 0, y: -1 }` and add it to an entities current position to calculate the new position. But our path returns absolute positions like `{ x: 43, y: 18 }` - our goblins are trying to teleport into solid rock somewhere on our map and our movement system is failing back to "goblin bump into a wall", because they are trying to move into a blocking location with a wall. The simplest solution here is to modify our `Move` component and `movement` system to account for both relative and absolute positions. Let's add a flag in our Move component to let the system know what sort of position it's dealing with. In `./src/state/components.js` add a property called `relative` like this:
 
 ```diff
 export class Move extends Component {
@@ -705,7 +705,7 @@ export const movement = () => {
 
 Now our goblins should move straight for our @ and attack! Give it a try!
 
-Did you win? If not, you may have noticed another interesting bug. It presents in different ways - crashing completely, becoming an undead zombie, or even gaining control of a goblin skate boarding around the dungeon on the eartly remains of our @!
+Did you win? If not, you may have noticed another interesting bug. It presents in different ways - crashing completely, becoming an undead zombie, or even gaining control of a goblin skate boarding around the dungeon on the earthly remains of our @!
 
 It all boils down to the player died and our code isn't handling it well :)
 

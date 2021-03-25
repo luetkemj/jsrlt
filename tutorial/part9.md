@@ -35,8 +35,8 @@ if (gameState === 'GAME') {
 Rather than go through the refactor bit by bit, I'll just give you the final result. It really is just wrapping the existing logic to render each section of the UI in their own functions and then calling them individually. Go ahead and paste the following into `./src/systems/render.js` overwriting everything that was already there.
 
 ```javascript
-import { throttle } from 'lodash';
-import world from '../state/ecs';
+import { throttle } from "lodash";
+import world from "../state/ecs";
 import {
   Appearance,
   IsInFov,
@@ -45,8 +45,8 @@ import {
   Layer100,
   Layer300,
   Layer400,
-} from '../state/components';
-import { messageLog } from '../state/ecs';
+} from "../state/components";
+import { messageLog } from "../state/ecs";
 import {
   clearCanvas,
   drawCell,
@@ -54,10 +54,10 @@ import {
   drawText,
   grid,
   pxToCell,
-} from '../lib/canvas';
-import { toLocId } from '../lib/grid';
-import { readCacheSet } from '../state/cache';
-import { gameState, selectedInventoryIndex } from '../index';
+} from "../lib/canvas";
+import { toLocId } from "../lib/grid";
+import { readCacheSet } from "../state/cache";
+import { gameState, selectedInventoryIndex } from "../index";
 
 const layer100Entities = world.createQuery({
   all: [Position, Appearance, Layer100],
@@ -84,7 +84,7 @@ const renderMap = () => {
     if (entity.isInFov) {
       drawCell(entity);
     } else {
-      drawCell(entity, { color: '#333' });
+      drawCell(entity, { color: "#333" });
     }
   });
 
@@ -92,7 +92,7 @@ const renderMap = () => {
     if (entity.isInFov) {
       drawCell(entity);
     } else {
-      drawCell(entity, { color: '#333' });
+      drawCell(entity, { color: "#333" });
     }
   });
 
@@ -100,7 +100,7 @@ const renderMap = () => {
     if (entity.isInFov) {
       drawCell(entity);
     } else {
-      drawCell(entity, { color: '#100' });
+      drawCell(entity, { color: "#100" });
     }
   });
 };
@@ -126,9 +126,9 @@ const renderPlayerHud = (player) => {
   });
 
   drawText({
-    text: '♥'.repeat(grid.playerHud.width),
-    background: 'black',
-    color: '#333',
+    text: "♥".repeat(grid.playerHud.width),
+    background: "black",
+    color: "#333",
     x: grid.playerHud.x,
     y: grid.playerHud.y + 1,
   });
@@ -137,9 +137,9 @@ const renderPlayerHud = (player) => {
 
   if (hp > 0) {
     drawText({
-      text: '♥'.repeat(hp * grid.playerHud.width),
-      background: 'black',
-      color: 'red',
+      text: "♥".repeat(hp * grid.playerHud.width),
+      background: "black",
+      color: "red",
       x: grid.playerHud.x,
       y: grid.playerHud.y + 1,
     });
@@ -160,24 +160,24 @@ const renderMessageLog = () => {
 
   drawText({
     text: messageLog[2],
-    background: '#000',
-    color: '#666',
+    background: "#000",
+    color: "#666",
     x: grid.messageLog.x,
     y: grid.messageLog.y,
   });
 
   drawText({
     text: messageLog[1],
-    background: '#000',
-    color: '#aaa',
+    background: "#000",
+    color: "#aaa",
     x: grid.messageLog.x,
     y: grid.messageLog.y + 1,
   });
 
   drawText({
     text: messageLog[0],
-    background: '#000',
-    color: '#fff',
+    background: "#000",
+    color: "#fff",
     x: grid.messageLog.x,
     y: grid.messageLog.y + 2,
   });
@@ -188,7 +188,7 @@ const clearInfoBar = () => {
     text: ` `.repeat(grid.infoBar.width),
     x: grid.infoBar.x,
     y: grid.infoBar.y,
-    background: 'black',
+    background: "black",
   });
 };
 
@@ -198,7 +198,7 @@ const renderInfoBar = (mPos) => {
   const { x, y } = mPos;
   const locId = toLocId({ x, y });
 
-  const esAtLoc = readCacheSet('entitiesAtLocation', locId) || [];
+  const esAtLoc = readCacheSet("entitiesAtLocation", locId) || [];
   const entitiesAtLoc = [...esAtLoc];
 
   clearInfoBar();
@@ -206,15 +206,15 @@ const renderInfoBar = (mPos) => {
   if (entitiesAtLoc) {
     entitiesAtLoc
       .filter((eId) => {
-        const entity = ecs.getEntity(eId);
+        const entity = world.getEntity(eId);
         return (
-          layer100Entities.isMatch(entity) ||
-          layer300Entities.isMatch(entity) ||
-          layer400Entities.isMatch(entity)
+          layer100Entities.matches(entity) ||
+          layer300Entities.matches(entity) ||
+          layer400Entities.matches(entity)
         );
       })
       .forEach((eId) => {
-        const entity = ecs.getEntity(eId);
+        const entity = world.getEntity(eId);
         clearInfoBar();
 
         if (entity.isInFov) {
@@ -222,16 +222,16 @@ const renderInfoBar = (mPos) => {
             text: `You see a ${entity.description.name}(${entity.appearance.char}) here.`,
             x: grid.infoBar.x,
             y: grid.infoBar.y,
-            color: 'white',
-            background: 'black',
+            color: "white",
+            background: "black",
           });
         } else {
           drawText({
             text: `You remember seeing a ${entity.description.name}(${entity.appearance.char}) here.`,
             x: grid.infoBar.x,
             y: grid.infoBar.y,
-            color: 'white',
-            background: 'black',
+            color: "white",
+            background: "black",
           });
         }
       });
@@ -241,41 +241,41 @@ const renderInfoBar = (mPos) => {
 const renderInventory = (player) => {
   clearInfoBar();
   // translucent to obscure the game map
-  drawRect(0, 0, grid.width, grid.height, 'rgba(0,0,0,0.65)');
+  drawRect(0, 0, grid.width, grid.height, "rgba(0,0,0,0.65)");
 
   drawText({
-    text: 'INVENTORY',
-    background: 'black',
-    color: 'white',
+    text: "INVENTORY",
+    background: "black",
+    color: "white",
     x: grid.inventory.x,
     y: grid.inventory.y,
   });
 
   drawText({
-    text: '(c)Consume (d)Drop',
-    background: 'black',
-    color: '#666',
+    text: "(c)Consume (d)Drop",
+    background: "black",
+    color: "#666",
     x: grid.inventory.x,
     y: grid.inventory.y + 1,
   });
 
-  if (player.inventory.list.length) {
-    player.inventory.list.forEach((entity, idx) => {
+  if (player.inventory.inventoryItems.length) {
+    player.inventory.inventoryItems.forEach((item, idx) => {
       drawText({
-        text: `${idx === selectedInventoryIndex ? '*' : ' '}${
-          entity.description.name
+        text: `${idx === selectedInventoryIndex ? "*" : " "}${
+          item.description.name
         }`,
-        background: 'black',
-        color: 'white',
+        background: "black",
+        color: "white",
         x: grid.inventory.x,
         y: grid.inventory.y + 3 + idx,
       });
     });
   } else {
     drawText({
-      text: '-empty-',
-      background: 'black',
-      color: '#666',
+      text: "-empty-",
+      background: "black",
+      color: "#666",
       x: grid.inventory.x,
       y: grid.inventory.y + 3,
     });
@@ -287,14 +287,14 @@ export const render = (player) => {
   renderPlayerHud(player);
   renderMessageLog();
 
-  if (gameState === 'INVENTORY') {
+  if (gameState === "INVENTORY") {
     renderInventory(player);
   }
 };
 
-const canvas = document.querySelector('#canvas');
+const canvas = document.querySelector("#canvas");
 canvas.onmousemove = throttle((e) => {
-  if (gameState === 'GAME') {
+  if (gameState === "GAME") {
     const [x, y] = pxToCell(e);
     renderMap();
     renderInfoBar({ x, y });
@@ -326,7 +326,7 @@ const renderInfoBar = (mPos) => {
   clearInfoBar();
 
   if (entitiesAtLoc) {
-+    if (some(entitiesAtLoc, (eId) => ecs.getEntity(eId).isRevealed)) {
++    if (some(entitiesAtLoc, (eId) => world.getEntity(eId).isRevealed)) {
 +      drawCell({
 +        appearance: {
 +          char: "",
@@ -392,8 +392,8 @@ const update = () => {
 +  }
 
   if (playerTurn && userInput && gameState === "INVENTORY") {
-    processUserInput();
     effects();
+    processUserInput();
     render(player);
     playerTurn = true;
   }
@@ -406,17 +406,17 @@ const renderTargeting = (mPos) => {
   const { x, y } = mPos;
   const locId = toLocId({ x, y });
 
-  const esAtLoc = readCacheSet('entitiesAtLocation', locId) || [];
+  const esAtLoc = readCacheSet("entitiesAtLocation", locId) || [];
   const entitiesAtLoc = [...esAtLoc];
 
   clearInfoBar();
 
   if (entitiesAtLoc) {
-    if (some(entitiesAtLoc, (eId) => ecs.getEntity(eId).isRevealed)) {
+    if (some(entitiesAtLoc, (eId) => world.getEntity(eId).isRevealed)) {
       drawCell({
         appearance: {
-          char: '',
-          background: 'rgba(74, 232, 218, 0.5)',
+          char: "",
+          background: "rgba(74, 232, 218, 0.5)",
         },
         position: { x, y },
       });
@@ -457,8 +457,8 @@ export class Animate extends Component {
   static properties = {
     startTime: null,
     duration: 250,
-    char: '',
-    color: '',
+    char: "",
+    color: "",
   };
 
   onSetStartTime(evt) {
@@ -516,11 +516,11 @@ ecs.registerComponent(Ai);
 On to the animation system itself. Create a new file at `./src/systems/animation.js` that looks like this:
 
 ```javascript
-import { last } from 'lodash';
-import world from '../state/ecs';
-import { clearCanvas, drawCell } from '../lib/canvas';
-const { Animate, IsInFov } = require('../state/components');
-import { gameState } from '../index';
+import { last } from "lodash";
+import world from "../state/ecs";
+import { clearCanvas, drawCell } from "../lib/canvas";
+const { Animate, IsInFov } = require("../state/components");
+import { gameState } from "../index";
 
 const animatingEntities = world.createQuery({
   all: [Animate],
@@ -538,7 +538,7 @@ const hexToRgb = (hex) => {
 };
 
 export const animation = () => {
-  if (gameState !== 'GAME') {
+  if (gameState !== "GAME") {
     return;
   }
 
@@ -550,12 +550,12 @@ export const animation = () => {
     const time = new Date();
     // set animation startTime
     if (!animate.startTime) {
-      entity.fireEvent('set-start-time', { time });
+      entity.fireEvent("set-start-time", { time });
     }
     const frameTime = time - animate.startTime;
     // end animation when complete
     if (frameTime > animate.duration) {
-      return entity.remove('Animate');
+      return entity.remove("Animate");
     }
     const framePercent = frameTime / animate.duration;
     // do the animation
@@ -570,7 +570,7 @@ export const animation = () => {
       appearance: {
         char: animate.char || entity.appearance.char,
         color: `rgba(${r}, ${g}, ${b}, ${1 - framePercent})`,
-        background: 'transparent',
+        background: "transparent",
       },
       position: entity.position,
     });
@@ -604,12 +604,12 @@ Step 3: Set the frameTime and check if our animation has completed.
 const time = new Date();
 // set animation startTime
 if (!animate.startTime) {
-  entity.fireEvent('set-start-time', { time });
+  entity.fireEvent("set-start-time", { time });
 }
 const frameTime = time - animate.startTime;
 // end animation when complete
 if (frameTime > animate.duration) {
-  return entity.remove('Animate');
+  return entity.remove("Animate");
 }
 ```
 
@@ -734,30 +734,30 @@ In `./src/state/prefabs` add the following prefab:
 
 ```javascript
 export const ScrollLightning = {
-  name: 'ScrollLightning',
-  inherit: ['Item'],
+  name: "ScrollLightning",
+  inherit: ["Item"],
   components: [
     {
-      type: 'Appearance',
-      properties: { char: '♪', color: '#DAA520' },
+      type: "Appearance",
+      properties: { char: "♪", color: "#DAA520" },
     },
     {
-      type: 'Description',
-      properties: { name: 'scroll of lightning' },
+      type: "Description",
+      properties: { name: "scroll of lightning" },
     },
     {
-      type: 'Effects',
+      type: "Effects",
       properties: {
-        animate: { color: '#F7FF00' },
+        animate: { color: "#F7FF00" },
         events: [
           {
-            name: 'take-damage',
+            name: "take-damage",
             args: { amount: 25 },
           },
         ],
       },
     },
-    { type: 'RequiresTarget', properties: { acquired: 'RANDOM' } },
+    { type: "RequiresTarget", properties: { acquired: "RANDOM" } },
   ],
 };
 ```
@@ -769,7 +769,7 @@ In `src/state/components.js` go ahead and add the `RequiresTarget` component.
 ```javascript
 export class RequiresTarget extends Component {
   static properties = {
-    acquired: 'RANDOM',
+    acquired: "RANDOM",
   };
 }
 ```
@@ -889,17 +889,17 @@ And remove that logic from the movement system in `./src/systems/movement.js`:
 -};
 ```
 
-For our lighning scroll we will be targeting a random nearby enemy. To accomplish this we need to be able to specify a target so we can transfer effects to it from a scroll. Then our effects system can just do it's thing.
+For our lightning scroll we will be targeting a random nearby enemy. To accomplish this we need to be able to specify a target so we can transfer effects to it from a scroll. Then our effects system can just do it's thing.
 
 First we need two more components, `Target` and `TargetingItem`. Go ahead and add them in `./src/state/components.js`.
 
 ```javascript
 export class Target extends Component {
-  static properties = { locId: '' };
+  static properties = { locId: "" };
 }
 
 export class TargetingItem extends Component {
-  static properties = { item: '<Entity>' };
+  static properties = { item: "<Entity>" };
 }
 ```
 
@@ -923,35 +923,39 @@ ecs.registerComponent(RequiresTarget);
 And we will of course need a targeting system. Add a new file at `./src/systems/targeting.js`
 
 ```javascript
-import world, { addLog } from '../state/ecs';
-import { readCacheSet } from '../state/cache';
+import world, { addLog } from "../state/ecs";
+import { readCacheSet } from "../state/cache";
 
-import { Target, TargetingItem } from '../state/components';
+import {
+  ActiveEffects,
+  Effects,
+  Target,
+  TargetingItem,
+} from "../state/components";
 
 const targetingEntities = world.createQuery({
   all: [Target, TargetingItem],
 });
 
-export const targeting = () => {
+export const targeting = (player) => {
   targetingEntities.get().forEach((entity) => {
-    const { item } = entity.targetingItem;
+    const item = world.getEntity(entity.targetingItem.itemId);
 
-    if (item && item.has('Effects')) {
-      const targets = readCacheSet('entitiesAtLocation', entity.target.locId);
+    if (item && item.has(Effects)) {
+      const targets = readCacheSet("entitiesAtLocation", entity.target.locId);
 
       targets.forEach((eId) => {
-        const target = ecs.getEntity(eId);
-        item
-          .get('Effects')
-          .forEach((x) => target.add('ActiveEffects', { ...x.serialize() }));
+        const target = world.getEntity(eId);
+        item.effects.forEach((x) =>
+          target.add(ActiveEffects, { ...x.serialize() })
+        );
       });
 
-      entity.remove('Target');
-      entity.remove('TargetingItem');
+      entity.remove(entity.target);
+      entity.remove(entity.targetingItem);
 
       addLog(`You use a ${item.description.name}`);
-
-      item.destroy();
+      player.fireEvent("consume", item);
     }
   });
 };
@@ -984,7 +988,7 @@ import { render } from "./systems/render";
 +import { targeting } from "./systems/targeting";
 import world, { addLog } from "./state/ecs";
 -import { Move, Position } from "./state/components";
-+import { IsInFov, Move, Position, Ai } from "./state/components";
++import { ActiveEffects, Ai, Effects, IsInFov, Move, Position, Target, TargetingItem } from './state/components/';
 +
 +const enemiesInFOV = world.createQuery({ all: [IsInFov, Ai] });
 ```
@@ -993,33 +997,30 @@ Next when an item is consumed we need to get a target if it requires one.
 
 ```diff
       if (entity) {
--        if (entity.has("Effects")) {
+-        if (entity.has(Effects)) {
 +        if (entity.requiresTarget) {
 +          // get a target that is NOT the player
 +          const target = sample([...enemiesInFOV.get()]);
 +
 +          if (target) {
-+            player.add("TargetingItem", { item: entity });
-+            player.add("Target", { locId: toLocId(target.position) });
++            player.add(TargetingItem, { itemId: entity.id });
++            player.add(Target, { locId: toLocId(target.position) });
 +          } else {
 +            addLog(`The scroll disintegrates uselessly in your hand`);
-+            entity.destroy();
++            player.fireEvent('consume', entity);
 +          }
-+        } else if (entity.has("Effects")) {
++        } else if (entity.has(Effects)) {
           // clone all effects and add to self
-          entity
-            .get("Effects")
-            .forEach((x) => player.add("ActiveEffects", { ...x.serialize() }));
+          entity.effects.forEach((x) => player.add(ActiveEffects, { ...x.serialize() }));
 -        }
 
 -        addLog(`You consume a ${entity.description.name}`);
--        entity.destroy();
+-        player.fireEvent('consume', entity);
 +          addLog(`You consume a ${entity.description.name}`);
-+          entity.destroy();
++          player.fireEvent('consume', entity);
 +        }
 
-        if (selectedInventoryIndex > player.inventory.list.length - 1)
-          selectedInventoryIndex = player.inventory.list.length - 1;
+        selectedInventoryIndex = 0;
 
         gameState = "GAME";
       }
@@ -1029,9 +1030,9 @@ And finally, call the targeting system.
 
 ```diff
   if (playerTurn && userInput && gameState === "INVENTORY") {
-    processUserInput();
-+    targeting();
     effects();
+    processUserInput();
++    gameState === 'TARGETING';
     render(player);
     playerTurn = true;
 ```
@@ -1046,31 +1047,31 @@ Let's start with a new scroll prefab in `./src/state/prefabs.js`:
 
 ```javascript
 export const ScrollParalyze = {
-  name: 'ScrollParalyze',
-  inherit: ['Item'],
+  name: "ScrollParalyze",
+  inherit: ["Item"],
   components: [
     {
-      type: 'Appearance',
-      properties: { char: '♪', color: '#DAA520' },
+      type: "Appearance",
+      properties: { char: "♪", color: "#DAA520" },
     },
     {
-      type: 'Description',
-      properties: { name: 'scroll of paralyze' },
+      type: "Description",
+      properties: { name: "scroll of paralyze" },
     },
     {
-      type: 'Effects',
+      type: "Effects",
       properties: {
-        animate: { color: '#FFB0B0' },
+        animate: { color: "#FFB0B0" },
         addComponents: [
           {
-            name: 'Paralyzed',
+            name: "Paralyzed",
             properties: {},
           },
         ],
         duration: 10,
       },
     },
-    { type: 'RequiresTarget', properties: { acquired: 'MANUAL' } },
+    { type: "RequiresTarget", properties: { acquired: "MANUAL" } },
   ],
 };
 ```
@@ -1079,7 +1080,7 @@ There are a couple new things here. In effects, we now have `addComponents` and 
 
 Let's begin with implementing `addComponents` to our effects components and system.
 
-In `./src/state/components` we need to add a new property to both `ActiveEffects` and `Effects`. Have you noticed how these two components continue to mirror eachother? Let's dry this up a bit by referencing a single props object.
+In `./src/state/components` we need to add a new property to both `ActiveEffects` and `Effects`. Have you noticed how these two components continue to mirror each other? Let's dry this up a bit by referencing a single props object.
 
 ```diff
 +const effectProps = {
@@ -1162,7 +1163,70 @@ ecs.registerPrefab(ScrollLightning);
 +ecs.registerPrefab(ScrollParalyze);
 ```
 
-Let's update our effects system to handle addComponents by adding any components on the effect to the affected entity. In `./src/systems/effect.js`
+Now before we continue, you probably picked up on how components are added and removed.
+In case you haven't, let me try to walk you through it.
+
+```js
+// add component to a dropped item
+item.add(IsPickup);
+
+// remove component from a picked up item
+item.remove(item.isPickup);
+```
+
+Now, why are they different. It has to do with the way Geotic implements adding and removing components.
+
+The method add() takes up to two parameters. One is the Class (IsPickup) and the other are the Properties. You have seen this when we added the Move class to entities before.
+It instantiates this class with the given properties and attaches the class as component.
+
+It achieves that by simply creating a new key on our entity object and storing the class instance inside that.
+
+In contrast, the remove() method takes a component, which is already attached to our entity. As mentioned before, it's the key of our object. Since we need to reference the entity as well, we simply pass the entity.component.
+
+That's it for the little explanation. I wouldn't mention it if there wasn't particular relevance to the next steps.
+We want our game to be dynamic and the more items, effects, etc we add, the more important it becomes to have smart code.
+
+In case of our component adding and removing, we need to cover two cases.
+
+First, we need to be able to pass a class to the add method. The reason for that is, that you can't simply instantiate a class from a string. There is a couple of ways around that, but most especially eval() should be avoided.
+
+Second, we need to remove the component via key.
+
+Let's change some code in our `effect.js` file =)
+
+````diff
+import { ActiveEffects, Animate } from '../state/components';
++import { Paralyzed } from '../state/components';
+import world from '../state/ecs';
++import { toCamelCase } from '../utils/misc';
+
++const classes = { Paralyzed };
+
+const activeEffectsEntities = world.createQuery({
+  all: [ActiveEffects],
+});
+
+export const effects = () => {
+  activeEffectsEntities.get().forEach((entity) => {
+    entity.activeEffects.forEach((c) => {
+      if (entity[c.component]) {
+        entity[c.component].current += c.delta;
+
+        if (entity[c.component].current > entity[c.component].max) {
+          entity[c.component].current = entity[c.component].max;
+        }
+      }
+
+      c.destroy();
+    });
+  });
+};
+```
+
+This is an easy way to pass classes to other functions, without referencing them by name directly.
+Note, that you will have to import all components you want to add as effects and also reference them in the classes object.
+
+With that done let's update our effects system to handle addComponents by adding any components on the effect to the affected entity. In `./src/systems/effect.js`
 
 ```diff
       if (c.events.length) {
@@ -1172,32 +1236,47 @@ Let's update our effects system to handle addComponents by adding any components
 +      // handle addComponents
 +      if (c.addComponents.length) {
 +        c.addComponents.forEach((component) => {
-+          if (!entity.has(component.name)) {
-+            entity.add(component.name, component.properties);
++          if (!entity.has(classes[component.name])) {
++            entity.add(classes[component.name], component.properties);
 +          }
 +        });
 +      }
 
-      entity.add("Animate", { ...c.animate });
-```
+      entity.add(Animate, { ...c.animate });
+````
 
 We can now add a paralyze component to an entity via an effect. But how do we remove it?
 
-Currently our effects system only handles instant effects. Immediatly after processing the effect we remove the component from the affected entity. To handle longer lasting effects we can rely on the duration property. When processing an effect we will reduce the duration value by 1. Only when duration has reached 0 will we remove the effect component from our affected entity.
+Currently our effects system only handles instant effects. Immediately after processing the effect we remove the component from the affected entity. To handle longer lasting effects we can rely on the duration property. When processing an effect we will reduce the duration value by 1. Only when duration has reached 0 will we remove the effect component from our affected entity.
 
 We will also need to remove 'temporary' components that may have been added by an effect like paralyze.
 
-```diff
-      entity.add("Animate", { ...c.animate });
+Most of our components are written in camelCase while our Classes are in PascalCase.
+When removing components, we need to make sure to reference the correct key.
+For that, we use a small helper function.
 
--      c.remove();
+I created a file in `./src/utils/` called `misc.js`.
+
+```js
+export const toCamelCase = (string) =>
+  string[0].toUpperCase() + string.slice(1);
+```
+
+Separating concerns is important, so I made sure to declare this helper function outside of the effect system.
+
+Import the helper file at the top as usual and then we can continue.
+
+```diff
+      entity.add(Animate, { ...c.animate });
+
+-      c.destroy();
 +      if (!c.duration) {
-+        c.remove();
++        c.destroy();
 +
 +        if (c.addComponents.length) {
 +          c.addComponents.forEach((component) => {
-+            if (entity.has(component.name)) {
-+              entity.remove(component.name, component.properties);
++            if (entity.has(classes[component.name])) {
++              entity.remove(entity[toCamelCase(component.name)]);
 +            }
 +          });
 +        }
@@ -1211,13 +1290,13 @@ We will also need to remove 'temporary' components that may have been added by a
 
 With this all in place we will be able to add the Paralyze component to an entity - but how do we actually make it paralyzed? In our movement system we can just make a check for the Paralyze component and then act accordingly.
 
-In `./src/systems/movement.js` we can just remove the `Move` component and return if an entity is paralyzed like this:
+In `./src/systems/movement.js` we can just return if an entity is paralyzed like this:
 
 ```diff
 export const movement = () => {
   movableEntities.get().forEach((entity) => {
-+    if (entity.has("Paralyzed")) {
-+      return entity.remove(Move);
++    if (entity.has(Paralyzed)) {
++      return
 +    }
 +
     let mx = entity.move.x;
@@ -1253,31 +1332,31 @@ if (process.env.NODE_ENV === "development") {
 with
 
 ```javascript
-const canvas = document.querySelector('#canvas');
+const canvas = document.querySelector("#canvas");
 
 canvas.onclick = (e) => {
   const [x, y] = pxToCell(e);
   const locId = toLocId({ x, y });
 
-  readCacheSet('entitiesAtLocation', locId).forEach((eId) => {
-    const entity = ecs.getEntity(eId);
+  readCacheSet("entitiesAtLocation", locId).forEach((eId) => {
+    const entity = world.getEntity(eId);
 
     // Only do this during development
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       console.log(
-        `${get(entity, 'appearance.char', '?')} ${get(
+        `${get(entity, "appearance.char", "?")} ${get(
           entity,
-          'description.name',
-          '?'
+          "description.name",
+          "?"
         )}`,
         entity.serialize()
       );
     }
 
-    if (gameState === 'TARGETING') {
-      player.add('Target', { locId });
-      gameState = 'GAME';
-      targeting();
+    if (gameState === "TARGETING") {
+      player.add("Target", { locId });
+      gameState = "GAME";
+      targeting(player);
       render(player);
     }
   });
@@ -1298,11 +1377,11 @@ Now we just need to handle manual targeting differently from random. In the keyb
 +            const target = sample([...enemiesInFOV.get()]);
 +
 +            if (target) {
-+              player.add("TargetingItem", { item: entity });
-+              player.add("Target", { locId: toLocId(target.position) });
++              player.add(TargetingItem, { itemId: entity.id });
++              player.add(Target, { locId: toLocId(target.position) });
 +            } else {
 +              addLog(`The scroll disintegrates uselessly in your hand`);
-+              entity.destroy();
++              player.fireEvent('consume', entity);
 +            }
 +          }
 ```
@@ -1312,15 +1391,15 @@ Next if target selection is manual, we can just add the targetingItem and set th
 ```diff
 -          if (target) {
 +          if (entity.requiresTarget.acquired === "MANUAL") {
-            player.add("TargetingItem", { item: entity });
--            player.add("Target", { locId: toLocId(target.position) });
+            player.add(TargetingItem, { itemId: entity.id });
+-            player.add(Target, { locId: toLocId(target.position) });
 -          } else {
 -            addLog(`The scroll disintegrates uselessly in your hand`);
--            entity.destroy();
+-            player.fireEvent('consume', entity);
 +            gameState = "TARGETING";
 +            return;
           }
-        } else if (entity.has("Effects")) {
+        } else if (entity.has(Effects)) {
 ```
 
 The only thing left is to remove the temporary keybinding for targeting and clear the TargetingItem if the player aborts.
@@ -1336,7 +1415,7 @@ The only thing left is to remove the temporary keybinding for targeting and clea
   if (gameState === "TARGETING") {
 -    if (userInput === "z" || userInput === "Escape") {
 +    if (userInput === "Escape") {
-+      player.remove("TargetingItem");
++      player.remove(player.targetingItem);
        gameState = "GAME";
      }
 ```
@@ -1353,33 +1432,33 @@ Start once again in `./src/state/prefabs.js` and add the definition for the fire
 
 ```javascript
 export const ScrollFireball = {
-  name: 'ScrollFireball',
-  inherit: ['Item'],
+  name: "ScrollFireball",
+  inherit: ["Item"],
   components: [
     {
-      type: 'Appearance',
-      properties: { char: '♪', color: '#DAA520' },
+      type: "Appearance",
+      properties: { char: "♪", color: "#DAA520" },
     },
     {
-      type: 'Description',
-      properties: { name: 'scroll of fireball' },
+      type: "Description",
+      properties: { name: "scroll of fireball" },
     },
     {
-      type: 'Effects',
+      type: "Effects",
       properties: {
-        animate: { color: '#FFA200', char: '^' },
+        animate: { color: "#FFA200", char: "^" },
         events: [
           {
-            name: 'take-damage',
+            name: "take-damage",
             args: { amount: 25 },
           },
         ],
       },
     },
     {
-      type: 'RequiresTarget',
+      type: "RequiresTarget",
       properties: {
-        acquired: 'MANUAL',
+        acquired: "MANUAL",
         aoeRange: 3,
       },
     },
@@ -1429,28 +1508,25 @@ if (item && item.has("Effects")) {
 -
 -  targets.forEach((eId) => {
 -    const target = ecs.getEntity(eId);
--    item
--      .get("Effects")
--      .forEach((x) => target.add("ActiveEffects", { ...x.serialize() }));
-+  entity.target.forEach((t) => {
+-    item.effects.forEach((x) => target.add("ActiveEffects", { ...x.serialize() }));
++  entity.target.forEach((t, idx) => {
 +    const targets = readCacheSet("entitiesAtLocation", t.locId);
 +
 +    targets.forEach((eId) => {
-+      const target = ecs.getEntity(eId);
++      const target = world.getEntity(eId);
 +      if (target.isInFov) {
-+        item
-+          .get("Effects")
-+          .forEach((x) =>
-+            target.add("ActiveEffects", { ...x.serialize() })
++        item.effects.forEach((x) =>
++            target.add(ActiveEffects, { ...x.serialize() })
 +          );
 +      }
 +    });
++  entity.remove(entity.target[idx]);
   });
-
-  entity.remove("Target");
+-  entity.remove(entity.target);
+  entity.remove(entity.targetingItem);
 ```
 
-Now that we can hanlde multiple targets, let's create them for all locations with range. We can do this by using the `circle` function from our grid library. We just pass it the location of the mouseclick when the user is targeting and the aoeRange for a radius. We can then create targets for each location within the circle.
+Now that we can handle multiple targets, let's create them for all locations with range. We can do this by using the `circle` function from our grid library. We just pass it the location of the mouseclick when the user is targeting and the aoeRange for a radius. We can then create targets for each location within the circle.
 
 In `./src/index.js` import `circle` from the grid library:
 
@@ -1463,17 +1539,17 @@ import { readCacheSet } from "./state/cache";
 
 ```diff
 if (gameState === "TARGETING") {
--  player.add("Target", { locId });
-+  const entity = player.inventory.list[selectedInventoryIndex];
+-  player.add(Target, { locId });
++  const entity = player.inventory.inventoryItems[selectedInventoryIndex];
 +  if (entity.requiresTarget.aoeRange) {
 +    const targets = circle({ x, y }, entity.requiresTarget.aoeRange);
-+    targets.forEach((locId) => player.add("Target", { locId }));
++    targets.forEach((locId) => player.add(Target, { locId }));
 +  } else {
-+    player.add("Target", { locId });
++    player.add(Target, { locId });
 +  }
 +
   gameState = "GAME";
-  targeting();
+  targeting(player);
 +  effects();
   render(player);
 }
@@ -1484,7 +1560,7 @@ All that's left now is to add some fireball scrolls to the dungeon!
 ```javascript
 times(10, () => {
   const tile = sample(openTiles);
-  world.createPrefab('ScrollFireball').add(Position, { x: tile.x, y: tile.y });
+  world.createPrefab("ScrollFireball").add(Position, { x: tile.x, y: tile.y });
 });
 ```
 

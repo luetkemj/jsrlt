@@ -10,7 +10,7 @@ Let's add backgrounds to our tiles first. In `./src/lib/canvas.js` add two addit
 
 ```javascript
 const drawBackground = ({ color, position }) => {
-  if (color === 'transparent') return;
+  if (color === "transparent") return;
 
   ctx.fillStyle = color;
 
@@ -166,15 +166,15 @@ Almost there! We need to query for each layer component so we can render everyth
 Make `./src/systems/render.js` look like this:
 
 ```javascript
-import world from '../state/ecs';
+import world from "../state/ecs";
 import {
   Appearance,
   Position,
   Layer100,
   Layer300,
   Layer400,
-} from '../state/components';
-import { clearCanvas, drawCell } from '../lib/canvas';
+} from "../state/components";
+import { clearCanvas, drawCell } from "../lib/canvas";
 
 const layer100Entities = world.createQuery({
   all: [Position, Appearance, Layer100],
@@ -246,7 +246,7 @@ export const readCacheSet = (name, key, value) => {
 export default cache;
 ```
 
-We just set up an object to store our cache and create some helper functions for basic CRUD operations. Our entitiesAtLocation cache will be an object with locId keys. LocIds are just a stringified combination of the location x and y properities (e.g, '0,1'). The value at each key will be a [Set](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set) of entity ids. A Set has some advantages over an array in this case. Specifically we have a get method for simple access of values and it's super fast.
+We just set up an object to store our cache and create some helper functions for basic CRUD operations. Our entitiesAtLocation cache will be an object with locId keys. LocIds are just a stringified combination of the location x and y properties (e.g, '0,1'). The value at each key will be a [Set](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set) of entity ids. A Set has some advantages over an array in this case. Specifically we have a get method for simple access of values and it's super fast.
 
 The purpose of this cache is to track what entities are in each location. So to start we should add entities to the cache when they get the `Position` component. Geotic provides some lifecycle methods that can help with this. In our components file at `./src/state/components.js` we can add entities to the cache when the Position component is attached to an entity!
 
@@ -315,7 +315,7 @@ With the new one that uses our cache:
 ```javascript
 const blockers = [];
 // read from cache
-const entitiesAtLoc = readCacheSet('entitiesAtLocation', `${mx},${my}`);
+const entitiesAtLoc = readCacheSet("entitiesAtLocation", `${mx},${my}`);
 
 for (const eId of entitiesAtLoc) {
   if (world.getEntity(eId).isBlocking) {
@@ -328,7 +328,7 @@ if (blockers.length) {
 }
 ```
 
-The biggest change here is that we now only check the entities at our intended location if they are blocking. Previously we checked the location of every entity in the entire game to determine if it was both blocking AND in the place we wanted to go. We're going to need this information quite a bit moving forward so it makes sense to just rip off the bandaid and implement the cache.
+The biggest change here is that we now only check the entities at our intended location if they are blocking. Previously we checked the location of every entity in the entire game to determine if it was both blocking AND in the place we wanted to go. We're going to need this information quite a bit moving forward so it makes sense to just rip off the band aid and implement the cache.
 
 ---
 
@@ -337,7 +337,7 @@ We are all caught up and ready to add "Field of Vision"! We are going to be usin
 Ok, first let's go ahead and add a new file called `fov.js` to our lib directory at `./src/lib/fov.js`. Go ahead and paste this code into it:
 
 ```javascript
-import { distance, idToCell } from './grid';
+import { distance, idToCell } from "./grid";
 
 const octantTransforms = [
   { xx: 1, xy: 0, yx: 0, yy: 1 },
@@ -454,11 +454,11 @@ export default function createFOV(
 Now that we have our Field of Vision algorithm in place we need to wire it up. We'll start with the system this time. Create a new file, again called `fov.js` but this time in the systems directory at `./src/systems/fov.js`. It should look like this:
 
 ```javascript
-import { readCacheSet } from '../state/cache';
-import world, { player } from '../state/ecs';
-import { grid } from '../lib/canvas';
-import createFOV from '../lib/fov';
-import { IsInFov, IsOpaque, IsRevealed } from '../state/components';
+import { readCacheSet } from "../state/cache";
+import world, { player } from "../state/ecs";
+import { grid } from "../lib/canvas";
+import createFOV from "../lib/fov";
+import { IsInFov, IsOpaque, IsRevealed } from "../state/components";
 
 const inFovEntities = world.createQuery({
   all: [IsInFov],
@@ -480,7 +480,7 @@ export const fov = () => {
   inFovEntities.get().forEach((x) => x.remove(x.isInFov));
 
   FOV.fov.forEach((locId) => {
-    const entitiesAtLoc = readCacheSet('entitiesAtLocation', locId);
+    const entitiesAtLoc = readCacheSet("entitiesAtLocation", locId);
 
     if (entitiesAtLoc) {
       entitiesAtLoc.forEach((eId) => {
@@ -707,7 +707,7 @@ export const render = () => {
     if (entity.isInFov) {
       drawCell(entity);
     } else {
-      drawCell(entity, { color: '#333' });
+      drawCell(entity, { color: "#333" });
     }
   });
 
@@ -715,7 +715,7 @@ export const render = () => {
     if (entity.isInFov) {
       drawCell(entity);
     } else {
-      drawCell(entity, { color: '#333' });
+      drawCell(entity, { color: "#333" });
     }
   });
 
@@ -723,7 +723,7 @@ export const render = () => {
     if (entity.isInFov) {
       drawCell(entity);
     } else {
-      drawCell(entity, { color: '#100' });
+      drawCell(entity, { color: "#100" });
     }
   });
 };

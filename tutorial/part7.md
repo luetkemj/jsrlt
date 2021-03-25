@@ -45,7 +45,7 @@ Next we'll add a new function called `drawText`. This new function will accept a
 export const drawText = (template) => {
   const textToRender = template.text;
 
-  textToRender.split('').forEach((char, index) => {
+  textToRender.split("").forEach((char, index) => {
     const options = { ...template };
     const character = {
       appearance: {
@@ -121,9 +121,9 @@ Render the gray version of our health bar
 
 ```javascript
 drawText({
-  text: '♥'.repeat(grid.playerHud.width),
-  background: 'black',
-  color: '#333',
+  text: "♥".repeat(grid.playerHud.width),
+  background: "black",
+  color: "#333",
   x: grid.playerHud.x,
   y: grid.playerHud.y + 1,
 });
@@ -136,9 +136,9 @@ const hp = player.health.current / player.health.max;
 
 if (hp > 0) {
   drawText({
-    text: '♥'.repeat(hp * grid.playerHud.width),
-    background: 'black',
-    color: 'red',
+    text: "♥".repeat(hp * grid.playerHud.width),
+    background: "black",
+    color: "red",
     x: grid.playerHud.x,
     y: grid.playerHud.y + 1,
   });
@@ -207,12 +207,12 @@ if (target.has("Health") && target.has("Defense")) {
 
 Finally we need to actually render the log in our render system `./src/systems/render.js`
 
-We are going to explicity render the first three messages of our log. As new messages are added to the beginning, older ones will fall off. They will still be stored in the array - we just won't render them.
+We are going to explicitly render the first three messages of our log. As new messages are added to the beginning, older ones will fall off. They will still be stored in the array - we just won't render them.
 
 First import `messageLog` to our render system:
 
 ```javascript
-import { messageLog } from '../state/ecs';
+import { messageLog } from "../state/ecs";
 ```
 
 Then, right after our health bar add the following:
@@ -220,24 +220,24 @@ Then, right after our health bar add the following:
 ```javascript
 drawText({
   text: messageLog[2],
-  background: '#000',
-  color: '#666',
+  background: "#000",
+  color: "#666",
   x: grid.messageLog.x,
   y: grid.messageLog.y,
 });
 
 drawText({
   text: messageLog[1],
-  background: '#000',
-  color: '#aaa',
+  background: "#000",
+  color: "#aaa",
   x: grid.messageLog.x,
   y: grid.messageLog.y + 1,
 });
 
 drawText({
   text: messageLog[0],
-  background: '#000',
-  color: '#fff',
+  background: "#000",
+  color: "#fff",
   x: grid.messageLog.x,
   y: grid.messageLog.y + 2,
 });
@@ -271,15 +271,15 @@ const clearInfoBar = () =>
     text: ` `.repeat(grid.infoBar.width),
     x: grid.infoBar.x,
     y: grid.infoBar.y,
-    background: 'black',
+    background: "black",
   });
 
-const canvas = document.querySelector('#canvas');
+const canvas = document.querySelector("#canvas");
 canvas.onmousemove = throttle((e) => {
   const [x, y] = pxToCell(e);
   const locId = toLocId({ x, y });
 
-  const esAtLoc = readCacheSet('entitiesAtLocation', locId) || [];
+  const esAtLoc = readCacheSet("entitiesAtLocation", locId) || [];
   const entitiesAtLoc = [...esAtLoc];
 
   clearInfoBar();
@@ -303,16 +303,16 @@ canvas.onmousemove = throttle((e) => {
             text: `You see a ${entity.description.name}(${entity.appearance.char}) here.`,
             x: grid.infoBar.x,
             y: grid.infoBar.y,
-            color: 'white',
-            background: 'black',
+            color: "white",
+            background: "black",
           });
         } else {
           drawText({
             text: `You remember seeing a ${entity.description.name}(${entity.appearance.char}) here.`,
             x: grid.infoBar.x,
             y: grid.infoBar.y,
-            color: 'white',
-            background: 'black',
+            color: "white",
+            background: "black",
           });
         }
       });
@@ -330,14 +330,14 @@ const clearInfoBar = () =>
     text: ` `.repeat(grid.infoBar.width),
     x: grid.infoBar.x,
     y: grid.infoBar.y,
-    background: 'black',
+    background: "black",
   });
 ```
 
 Next we just grab a reference to the canvas dom element so we can add an `onmousemove` listener to it.
 
 ```javascript
-const canvas = document.querySelector('#canvas');
+const canvas = document.querySelector("#canvas");
 ```
 
 We throttle the `onmousemove` event here to prevent it from being called as fast as possible to help with performance. The code between the braces should only run once every 100ms while the mouse is moving over the canvas.
@@ -354,7 +354,7 @@ Once in the braces we use the mouse event (e) to calculate our location on the g
 const [x, y] = pxToCell(e);
 const locId = toLocId({ x, y });
 
-const esAtLoc = readCacheSet('entitiesAtLocation', locId) || [];
+const esAtLoc = readCacheSet("entitiesAtLocation", locId) || [];
 const entitiesAtLoc = [...esAtLoc];
 
 clearInfoBar();
@@ -382,16 +382,16 @@ if (entitiesAtLoc) {
           text: `You see a ${entity.description.name}(${entity.appearance.char}) here.`,
           x: grid.infoBar.x,
           y: grid.infoBar.y,
-          color: 'white',
-          background: 'black',
+          color: "white",
+          background: "black",
         });
       } else {
         drawText({
           text: `You remember seeing a ${entity.description.name}(${entity.appearance.char}) here.`,
           x: grid.infoBar.x,
           y: grid.infoBar.y,
-          color: 'white',
-          background: 'black',
+          color: "white",
+          background: "black",
         });
       }
     });

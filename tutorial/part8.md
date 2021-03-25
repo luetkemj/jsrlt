@@ -40,26 +40,26 @@ Next we'll create a couple of new prefabs - the generic base `Item` and our more
 
 ```javascript
 export const Item = {
-  name: 'Item',
+  name: "Item",
   components: [
-    { type: 'Appearance' },
-    { type: 'Description' },
-    { type: 'Layer300' },
-    { type: 'IsPickup' },
+    { type: "Appearance" },
+    { type: "Description" },
+    { type: "Layer300" },
+    { type: "IsPickup" },
   ],
 };
 
 export const HealthPotion = {
-  name: 'HealthPotion',
-  inherit: ['Item'],
+  name: "HealthPotion",
+  inherit: ["Item"],
   components: [
     {
-      type: 'Appearance',
-      properties: { char: '!', color: '#DAA520' },
+      type: "Appearance",
+      properties: { char: "!", color: "#DAA520" },
     },
     {
-      type: 'Description',
-      properties: { name: 'health potion' },
+      type: "Description",
+      properties: { name: "health potion" },
     },
   ],
 };
@@ -113,15 +113,52 @@ Run the game! You should see some potions lying on the dungeon floor (!)
 
 Of course our @ needs a place to store the things it picks up. Time to add an inventory!
 
-Yet again, we'll start by adding a new component. In `./src/state/components.js` add an `Inventory`. It will only need a list property for storing an array of item entities.
+Yet again, we'll start by adding a new component. In `./src/state/components.js` add an `Inventory`. It will only need a inventoryItemIds property for storing an array of item ids as well as a useful "getter" method.
 
 ```javascript
+import { getEntityArrayRef } from '../utils/ecs-refs'
+
 export class Inventory extends Component {
   static properties = {
-    list: [],
+    inventoryItemIds: [],
   };
+
+  get inventoryItems() {
+    return getEntityArrayRef(this, 'inventoryItemIds');
 }
 ```
+
+This "getter" function will be one of our utility functions.
+In simple terms it takes the item ids and returns the entities back. With this, we have an easy access to the entities, without calling the world.getEntity() method every time.
+
+Go ahead and create a new file called `ecs-refs.js` at `./src/utils/ecs-refs.js`.
+
+Make the file look like this:
+
+```js
+export const getEntityArrayRef = (entity, idArrayProp) => {
+  const ids = entity[idArrayProp];
+  const newIds = [];
+  const entities = [];
+
+  for (const id of ids) {
+    const targetEntity = entity.world.getEntity(id);
+
+    if (!targetEntity) {
+      entity[idProp] = undefined;
+    } else {
+      newIds.push(id);
+      entities.push(targetEntity);
+    }
+  }
+
+  entity[idArrayProp] = newIds;
+
+  return entities;
+};
+```
+
+With that out of the way, let's continue with our inventory.
 
 As always, register it in `./src/state.ecs.js`.
 
@@ -173,27 +210,34 @@ In `./src/state/components.js` add `onPickUp` and `onDrop` events to the Invento
 ```diff
 export class Inventory extends Component {
   static properties = {
-    list: [],
+    inventoryItemIds: [],
   };
 
 +  onPickUp(evt) {
-+    this.list.push(evt.data);
++    this.inventoryItemIds.push(evt.data);
 +
 +    if (evt.data.position) {
 +      evt.data.remove(evt.data.position);
++      evt.data.remove(evt.data.isPickup);
 +    }
 +  }
 +
 +  onDrop(evt) {
-+    remove(this.list, (x) => x.id === evt.data.id);
-+    evt.data.add(Position, this.entity.position);
++    this.inventoryItemIds = this.inventoryItemIds.filter(
++      (itemId) => itemId !== evt.data.id
++    );
++    evt.data.add(Position, {
++      x: this.entity.position.x,
++      y: this.entity.position.y,
++    });
++    evt.data.add(IsPickup);
 +  }
 }
 ```
 
 We already take advantage of the `onAttached` lifecycle method in our `Position` component. This event fires automatically when the add method is called on an entity and we use it to populate our entitiesAtLocation cache.
 
-We can also take advantage of the `onDetached` lifecyle method to remove entities from the cache like so:
+We can also take advantage of the `onDestroyed` lifecyle method to remove entities from the cache like so:
 
 ```diff
 export class Position extends Component {
@@ -204,7 +248,7 @@ export class Position extends Component {
     addCacheSet("entitiesAtLocation", locId, this.entity.id);
   }
 
-+  onDetached() {
++  onDestroyed() {
 +    const locId = `${this.x},${this.y}`;
 +    deleteCacheSet("entitiesAtLocation", locId, this.entity.id);
 +  }
@@ -245,8 +289,8 @@ if (userInput === "ArrowLeft") {
 +}
 +
 +if (userInput === "d") {
-+  if (player.inventory.list.length) {
-+    player.fireEvent("drop", player.inventory.list[0]);
++  if (player.inventory.inventoryItems.length) {
++    player.fireEvent("drop", player.inventory.inventoryItems[0]);
 +  }
 +}
 
@@ -265,11 +309,11 @@ if (userInput === "g") {
 After that we read from our entitiesAtLocation cache and iterate through everything we find. If it has an `isPickup` component we set our pickupFound flag to true and fire our pick-up event passing it the entity. Then we add a message to our adventure log describing what was picked up.
 
 ```javascript
-readCacheSet('entitiesAtLocation', toLocId(player.position)).forEach((eId) => {
+readCacheSet("entitiesAtLocation", toLocId(player.position)).forEach((eId) => {
   const entity = world.getEntity(eId);
   if (entity.isPickup) {
     pickupFound = true;
-    player.fireEvent('pick-up', entity);
+    player.fireEvent("pick-up", entity);
     addLog(`You pickup a ${entity.description.name}`);
   }
 });
@@ -279,17 +323,17 @@ And lastly we check the flag - if after iterating through all the entities at ou
 
 ```javascript
 if (!pickupFound) {
-  addLog('There is nothing to pick up here');
+  addLog("There is nothing to pick up here");
 }
 ```
 
 Next we add a keybinding for `d`. For now we just check if there is anything in the inventory and if so drop the first item. We'll add a UI next so we can actually select the item to drop but this will get us started.
 
 ```javascript
-if (userInput === 'd') {
-  if (player.inventory.list.length) {
-    addLog(`You drop a ${player.inventory.list[0].description.name}`);
-    player.fireEvent('drop', player.inventory.list[0]);
+if (userInput === "d") {
+  if (player.inventory.inventoryItems.length) {
+    addLog(`You drop a ${player.inventory.inventoryItems[0].description.name}`);
+    player.fireEvent("drop", player.inventory.inventoryItems[0]);
   }
 }
 ```
@@ -319,7 +363,7 @@ export const grid = {
 And then import rectangle from our grid library and use it in a new function that will draw rectangles on our grid like this:
 
 ```javascript
-import { rectangle } from './grid';
+import { rectangle } from "./grid";
 ```
 
 ```javascript
@@ -353,35 +397,35 @@ import { readCacheSet } from "../state/cache";
 And then at the bottom of our render function add another conditional to display our inventory as an overlay if we're in the INVENTORY gameState:
 
 ```javascript
-if (gameState === 'INVENTORY') {
+if (gameState === "INVENTORY") {
   // translucent to obscure the game map
-  drawRect(0, 0, grid.width, grid.height, 'rgba(0,0,0,0.65)');
+  drawRect(0, 0, grid.width, grid.height, "rgba(0,0,0,0.65)");
 
   drawText({
-    text: 'INVENTORY',
-    background: 'black',
-    color: 'white',
+    text: "INVENTORY",
+    background: "black",
+    color: "white",
     x: grid.inventory.x,
     y: grid.inventory.y,
   });
 
-  if (player.inventory.list.length) {
-    player.inventory.list.forEach((entity, idx) => {
+  if (player.inventory.inventoryItemIds.length) {
+    player.inventory.inventoryItems.forEach((item, idx) => {
       drawText({
-        text: `${idx === selectedInventoryIndex ? '*' : ' '}${
-          entity.description.name
+        text: `${idx === selectedInventoryIndex ? "*" : " "}${
+          item.description.name
         }`,
-        background: 'black',
-        color: 'white',
+        background: "black",
+        color: "white",
         x: grid.inventory.x,
         y: grid.inventory.y + 3 + idx,
       });
     });
   } else {
     drawText({
-      text: '-empty-',
-      background: 'black',
-      color: '#666',
+      text: "-empty-",
+      background: "black",
+      color: "#666",
       x: grid.inventory.x,
       y: grid.inventory.y + 3,
     });
@@ -416,19 +460,19 @@ const update = () => {
     return;
   }
 
-  if (playerTurn && userInput && gameState === 'INVENTORY') {
+  if (playerTurn && userInput && gameState === "INVENTORY") {
     processUserInput();
     render(player);
     playerTurn = true;
   }
 
-  if (playerTurn && userInput && gameState === 'GAME') {
+  if (playerTurn && userInput && gameState === "GAME") {
     processUserInput();
     movement();
     fov(player);
     render(player);
 
-    if (gameState === 'GAME') {
+    if (gameState === "GAME") {
       playerTurn = false;
     }
   }
@@ -450,64 +494,65 @@ We need to update our processUserInput function to handle different gameStates a
 
 ```javascript
 const processUserInput = () => {
-  if (gameState === 'GAME') {
-    if (userInput === 'ArrowUp') {
+  if (gameState === "GAME") {
+    if (userInput === "ArrowUp") {
       player.add(Move, { x: 0, y: -1 });
     }
-    if (userInput === 'ArrowRight') {
+    if (userInput === "ArrowRight") {
       player.add(Move, { x: 1, y: 0 });
     }
-    if (userInput === 'ArrowDown') {
+    if (userInput === "ArrowDown") {
       player.add(Move, { x: 0, y: 1 });
     }
-    if (userInput === 'ArrowLeft') {
+    if (userInput === "ArrowLeft") {
       player.add(Move, { x: -1, y: 0 });
     }
 
-    if (userInput === 'g') {
+    if (userInput === "g") {
       let pickupFound = false;
-      readCacheSet('entitiesAtLocation', toLocId(player.position)).forEach(
+      readCacheSet("entitiesAtLocation", toLocId(player.position)).forEach(
         (eId) => {
           const entity = world.getEntity(eId);
           if (entity.isPickup) {
             pickupFound = true;
-            player.fireEvent('pick-up', entity);
+            player.fireEvent("pick-up", entity);
             addLog(`You pickup a ${entity.description.name}`);
           }
         }
       );
       if (!pickupFound) {
-        addLog('There is nothing to pick up here');
+        addLog("There is nothing to pick up here");
       }
     }
 
-    if (userInput === 'i') {
-      gameState = 'INVENTORY';
+    if (userInput === "i") {
+      gameState = "INVENTORY";
     }
 
     userInput = null;
   }
 
-  if (gameState === 'INVENTORY') {
-    if (userInput === 'i' || userInput === 'Escape') {
-      gameState = 'GAME';
+  if (gameState === "INVENTORY") {
+    if (userInput === "i" || userInput === "Escape") {
+      gameState = "GAME";
     }
 
-    if (userInput === 'ArrowUp') {
+    if (userInput === "ArrowUp") {
       selectedInventoryIndex -= 1;
       if (selectedInventoryIndex < 0) selectedInventoryIndex = 0;
     }
 
-    if (userInput === 'ArrowDown') {
+    if (userInput === "ArrowDown") {
       selectedInventoryIndex += 1;
-      if (selectedInventoryIndex > player.inventory.list.length - 1)
-        selectedInventoryIndex = player.inventory.list.length - 1;
+      if (selectedInventoryIndex > player.inventory.inventoryItems.length - 1)
+        selectedInventoryIndex = player.inventory.inventoryItems.length - 1;
     }
 
-    if (userInput === 'd') {
-      if (player.inventory.list.length) {
-        addLog(`You drop a ${player.inventory.list[0].description.name}`);
-        player.fireEvent('drop', player.inventory.list[0]);
+    if (userInput === "d") {
+      if (player.inventory.inventoryItems.length) {
+        const entity = player.inventory.inventoryItems[selectedInventoryIndex];
+        addLog(`You drop a ${entity.description.name}`);
+        player.fireEvent("drop", entity);
       }
     }
 
@@ -533,12 +578,12 @@ Let's start as always in `./src/state/components.js`. Add the two components we 
 ```javascript
 export class ActiveEffects extends Component {
   static allowMultiple = true;
-  static properties = { component: '', delta: '' };
+  static properties = { component: "", delta: "" };
 }
 
 export class Effects extends Component {
   static allowMultiple = true;
-  static properties = { component: '', delta: '' };
+  static properties = { component: "", delta: "" };
 }
 ```
 
@@ -594,8 +639,8 @@ export const HealthPotion = {
 Now for our effects system. Add a new file `effect.js` at `./src/systems/effects.js` it should look like this:
 
 ```javascript
-import world from '../state/ecs';
-const { ActiveEffects } = require('../state/components');
+import world from "../state/ecs";
+import { ActiveEffects } from "../state/components";
 
 const activeEffectsEntities = world.createQuery({
   all: [ActiveEffects],
@@ -627,36 +672,77 @@ Now that we have a generic effects system in place it's time to create a means t
 Add another keybinding (c)Consume in `./src/index.js` right before (d)Drop like this:
 
 ```javascript
-if (userInput === 'c') {
-  const entity = player.inventory.list[selectedInventoryIndex];
+if (userInput === "c") {
+  const entity = world.getEntity(
+    player.inventory.inventoryItemIds[selectedInventoryIndex]
+  );
 
   if (entity) {
-    if (entity.has('Effects')) {
+    if (entity.has(Effects)) {
       // clone all effects and add to self
-      entity
-        .get('Effects')
-        .forEach((x) => player.add('ActiveEffects', { ...x.serialize() }));
+      entity.effects.forEach((x) =>
+        player.add(ActiveEffects, { ...x.serialize() })
+      );
     }
 
     addLog(`You consume a ${entity.description.name}`);
-    player.inventory.list = player.inventory.list.filter(
-      (item) => item.id !== entity.id
+    player.inventory.inventoryItemIds = player.inventory.inventoryItemIds.filter(
+      (itemId) => itemId !== entity.id
     );
 
-    if (selectedInventoryIndex > player.inventory.list.length - 1)
-      selectedInventoryIndex = player.inventory.list.length - 1;
+    selectedInventoryIndex = 0;
   }
 }
 ```
 
-Consume does a few things. First it gets the currently selected item in your inventory. If it has effects components, it clones each of them and adds them to the player as ActiveEffects. A helpful message is logged to and the item is destroyed. Remember all the way at the beginning when we set the items property on the inventory component to an "<EntityArray>"? Geotic keeps track of those entities so when we destroy one it is automatically removed from the inventory list. Pretty nice :)
+Consume does a few things. First it gets the currently selected item in your inventory. If it has effects components, it clones each of them and adds them to the player as ActiveEffects. A helpful message is logged to and the item is destroyed. To make our lives a little bit easier, we should create a `OnConsume` event, which will handle the removal of items.
+
+Back in the `Inventory.js` file, we want to add a new function right below `onDrop`.
+Same as `onPickUp` and `onDrop` the new function will also expect an entity.
+
+```js
+onConsume(evt) {
+    this.inventoryItemIds = this.inventoryItemIds.filter(
+      (itemId) => itemId !== evt.data.id
+    );
+
+    evt.data.destroy();
+  }
+```
+
+Now we can change the long filter function into something super simple.
+
+```diff
+if (userInput === "c") {
+  const entity = world.getEntity(
+    player.inventory.inventoryItemIds[selectedInventoryIndex]
+  );
+
+  if (entity) {
+    if (entity.has(Effects)) {
+      // clone all effects and add to self
+      entity.effects.forEach((x) =>
+        player.add(ActiveEffects, { ...x.serialize() })
+      );
+    }
+
+    addLog(`You consume a ${entity.description.name}`);
+-    player.inventory.inventoryItemIds = player.inventory.inventoryItemIds.filter(
+-      (itemId) => itemId !== entity.id
+-    );
++    player.fireEvent('consume', entity);
+
+    selectedInventoryIndex = 0;
+  }
+}
+```
 
 All that's left is to call the new effects system itself.
 
 Import the new system in `./src/index.js`:
 
 ```javascript
-import { effects } from './systems/effects';
+import { effects } from "./systems/effects";
 ```
 
 And then call it in the update function like this:
@@ -668,15 +754,15 @@ const update = () => {
   }
 
   if (playerTurn && userInput && gameState === "INVENTORY") {
-    processUserInput();
 +   effects();
+    processUserInput();
     render(player);
     playerTurn = true;
   }
 
   if (playerTurn && userInput && gameState === "GAME") {
-    processUserInput();
 +   effects();
+    processUserInput();
     movement();
     fov(player);
     render(player);
@@ -687,8 +773,8 @@ const update = () => {
   }
 
   if (!playerTurn) {
-    ai(player);
 +   effects();
+    ai(player);
     movement();
     fov(player);
     render(player);
