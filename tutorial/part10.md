@@ -8,17 +8,17 @@ Geotic really does make saving super simple - so long as all your game state is 
 
 ```javascript
 const saveGame = () => {
-  const data = ecs.serialize();
-  localStorage.setItem('savegame', data);
+  const data = world.serialize();
+  localStorage.setItem("savegame", data);
 };
 
 const loadGame = () => {
-  const data = localStorage.getItem('savegame');
-  ecs.deserialize(data);
+  const data = localStorage.getItem("savegame");
+  world.deserialize(data);
 };
 ```
 
-We have a few more things to keep track of so we won't be able to get away that easy. In addtion to saving our entities in geotic we need to save our cache, the message log, and the id of our player entity. Not bad really.
+We have a few more things to keep track of so we won't be able to get away that easy. In addition to saving our entities in geotic we need to save our cache, the message log, and the id of our player entity. Not bad really.
 
 The first thing we'll do is move our message log from `./src/state/ecs.js` to `./src/index.js`. This is just a refactor to consolidate our code a bit. It's not strictly required for saving. But it will make things a bit easier for us moving forward.
 
@@ -117,13 +117,13 @@ We can import `serializeCache` add a `saveGame` function in `./src/index.js`.
 ```javascript
 const saveGame = () => {
   const gameSaveData = {
-    ecs: ecs.serialize(),
+    world: world.serialize(),
     cache: serializeCache(),
     playerId: player.id,
     messageLog,
   };
-  localStorage.setItem('gameSaveData', JSON.stringify(gameSaveData));
-  addLog('Game saved');
+  localStorage.setItem("gameSaveData", JSON.stringify(gameSaveData));
+  addLog("Game saved");
 };
 ```
 
@@ -153,28 +153,28 @@ Our loadGame function is a little bit bigger:
 
 ```javascript
 const loadGame = () => {
-  const data = JSON.parse(localStorage.getItem('gameSaveData'));
+  const data = JSON.parse(localStorage.getItem("gameSaveData"));
   if (!data) {
-    addLog('Failed to load - no saved games found');
+    addLog("Failed to load - no saved games found");
     return;
   }
 
-  for (let entity of ecs.entities.all) {
+  for (let entity of world.getEntities()) {
     entity.destroy();
   }
 
-  ecs.deserialize(data.ecs);
+  world.deserialize(data.world);
   deserializeCache(data.cache);
 
-  player = ecs.getEntity(data.playerId);
+  player = world.getEntity(data.playerId);
 
   userInput = null;
   playerTurn = true;
-  gameState = 'GAME';
+  gameState = "GAME";
   selectedInventoryIndex = 0;
 
   messageLog = data.messageLog;
-  addLog('Game loaded');
+  addLog("Game loaded");
 };
 ```
 
@@ -194,30 +194,30 @@ const loadGame = () => {
 Next we destroy all existing entities - best to start with a clean slate.
 
 ```javascript
-for (let entity of ecs.entities.all) {
+for (let entity of world.getEntities()) {
   entity.destroy();
 }
 ```
 
-Then we deserialize our ecs entities and our cache
+Then we deserialize our world entities and our cache
 
 ```javascript
-ecs.deserialize(data.ecs);
+world.deserialize(data.world);
 deserializeCache(data.cache);
 ```
 
 With our entities all back in place we can use our store player id to get the player entity:
 
 ```javascript
-player = ecs.getEntity(data.playerId);
+player = world.getEntity(data.playerId);
 ```
 
-And then just reset the other little bits we track to their intitial state:
+And then just reset the other little bits we track to their initial state:
 
 ```javascript
 userInput = null;
 playerTurn = true;
-gameState = 'GAME';
+gameState = "GAME";
 selectedInventoryIndex = 0;
 ```
 
@@ -263,17 +263,17 @@ Our newGame function looks like this:
 
 ```javascript
 const newGame = () => {
-  for (let item of ecs.entities.all) {
+  for (let item of world.getEntities()) {
     item.destroy();
   }
   clearCache();
 
   userInput = null;
   playerTurn = true;
-  gameState = 'GAME';
+  gameState = "GAME";
   selectedInventoryIndex = 0;
 
-  messageLog = ['', "Welcome to Gobs 'O Goblins!", ''];
+  messageLog = ["", "Welcome to Gobs 'O Goblins!", ""];
 
   initGame();
 };
@@ -349,7 +349,7 @@ Within the initGame function change this line:
 +player = world.createPrefab("Player");
 ```
 
-And intitialize the player variable with the others:
+And initialize the player variable with the others:
 
 ```diff
 +let player = {};
@@ -417,8 +417,8 @@ Then in `./src/systems/render.js` add a function called `renderMenu`. It will ju
 const renderMenu = () => {
   drawText({
     text: `(n)New (s)Save (l)Load | (i)Inventory (g)Pickup (arrow keys)Move/Attack (mouse)Look/Target`,
-    background: '#000',
-    color: '#666',
+    background: "#000",
+    color: "#666",
     x: grid.menu.x,
     y: grid.menu.y,
   });
