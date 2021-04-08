@@ -33,8 +33,8 @@ First, we need to create a new folder `./src/lib` to store the code for our canv
 
 ```javascript
 const pixelRatio = window.devicePixelRatio || 1;
-const canvas = document.querySelector("#canvas");
-const ctx = canvas.getContext("2d");
+const canvas = document.querySelector('#canvas');
+const ctx = canvas.getContext('2d');
 
 export const grid = {
   width: 100,
@@ -55,8 +55,8 @@ canvas.width = cellWidth * grid.width;
 canvas.height = cellHeight * grid.height;
 
 ctx.font = `normal ${fontSize}px Arial`;
-ctx.textAlign = "center";
-ctx.textBaseline = "middle";
+ctx.textAlign = 'center';
+ctx.textBaseline = 'middle';
 
 export const drawChar = ({ char, color, position }) => {
   ctx.fillStyle = color;
@@ -77,8 +77,8 @@ const pixelRatio = window.devicePixelRatio || 1;
 This gives us access to the pixel ratio of the user's machine and will make our game nice and crisp no matter the resolution of our user.
 
 ```javascript
-const canvas = document.querySelector("#canvas");
-const ctx = canvas.getContext("2d");
+const canvas = document.querySelector('#canvas');
+const ctx = canvas.getContext('2d');
 ```
 
 Here we are storing a reference to the canvas element in our html and then getting the context with the canvas API. You can read more about the canvas API [here](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API).
@@ -174,7 +174,7 @@ And replace it with this:
   .build {
     color: #444;
     font-size: 12px;
-    font-family: "Fira Code", monospace;
+    font-family: 'Fira Code', monospace;
     text-align: left;
     width: 100%;
     position: absolute;
@@ -226,7 +226,7 @@ Now let's add an event listener so we can do stuff when a user presses a key.
 Add this at the bottom of the file:
 
 ```javascript
-document.addEventListener("keydown", (ev) => {
+document.addEventListener('keydown', (ev) => {
   console.log(ev.key);
 });
 ```
@@ -238,22 +238,22 @@ Let's use that to our advantage and move our hero when the arrow keys are presse
 ```javascript
 let userInput = null;
 
-document.addEventListener("keydown", (ev) => {
+document.addEventListener('keydown', (ev) => {
   userInput = ev.key;
   processUserInput();
 });
 
 const processUserInput = () => {
-  if (userInput === "ArrowUp") {
+  if (userInput === 'ArrowUp') {
     player.position.y -= 1;
   }
-  if (userInput === "ArrowRight") {
+  if (userInput === 'ArrowRight') {
     player.position.x += 1;
   }
-  if (userInput === "ArrowDown") {
+  if (userInput === 'ArrowDown') {
     player.position.y += 1;
   }
-  if (userInput === "ArrowLeft") {
+  if (userInput === 'ArrowLeft') {
     player.position.x -= 1;
   }
 

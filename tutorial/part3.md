@@ -11,7 +11,7 @@ Like any good dungeon we will be digging ours out of the solid rock. Let's start
 In `./src/lib/dungeon.js` we can delete our import from `./canvas`
 
 ```diff
-import ecs from "../state/ecs";
+import world from "../state/ecs";
 import { rectangle } from "./grid";
 -import { grid } from "./canvas";
 ```
@@ -33,7 +33,7 @@ export const createDungeon = ({ x, y, width, height }) => {
     const tile = dungeon.tiles[key];
 
     if (tile.sprite === "WALL") {
-      const entity = ecs.createEntity();
+      const entity = world.createEntity();
       entity.add(Appearance, { char: "#", color: "#555" });
       entity.add(Position, dungeon.tiles[key]);
     }
@@ -45,7 +45,7 @@ export const createDungeon = ({ x, y, width, height }) => {
 
 So we're doing a couple things here. First we're now passing an options object into createDungeon. Next we create our rectangle like before but we pass in an extra argument. The rectangle function allows you to pass an additional object that will get merged with each tile it outputs. This allows us to add additional data for use when we create our entities.
 
-Next as we iterate through our dungeoon tiles we make use of that extra data. If a tile has a sprite property that is equal to "WALL" we create an entity and add the appropriate components.
+Next as we iterate through our dungeon tiles we make use of that extra data. If a tile has a sprite property that is equal to "WALL" we create an entity and add the appropriate components.
 
 Before we can test this we'll need to pass in an options object in `./src/index.js`. Go ahead and make these changes to that file:
 
@@ -75,7 +75,7 @@ Go ahead and run the game. You should see a big grid of walls. You may also noti
 Back in `./src/lib/dungeon`:
 
 ```diff
-import ecs from "../state/ecs";
+import world from "../state/ecs";
 import { rectangle } from "./grid";
 
 import { Appearance, Position } from "../state/components";
@@ -101,13 +101,13 @@ export const createDungeon = ({ x, y, width, height }) => {
     const tile = dungeon.tiles[key];
 
     if (tile.sprite === "WALL") {
-      const entity = ecs.createEntity();
+      const entity = world.createEntity();
       entity.add(Appearance, { char: "#", color: "#AAA" });
       entity.add(Position, dungeon.tiles[key]);
     }
 
 +    if (tile.sprite === "FLOOR") {
-+      const entity = ecs.createEntity();
++      const entity = world.createEntity();
 +      entity.add(Appearance, { char: "•", color: "#555" });
 +      entity.add(Position, dungeon.tiles[key]);
 +    }
@@ -138,7 +138,7 @@ Finally we add another conditional statement to handle floor tiles.
 
 ```javascript
 if (tile.sprite === "FLOOR") {
-  const entity = ecs.createEntity();
+  const entity = world.createEntity();
   entity.add(Appearance, { char: "•", color: "#555" });
   entity.add(Position, dungeon.tiles[key]);
 }
@@ -146,9 +146,9 @@ if (tile.sprite === "FLOOR") {
 
 Your game should now have a room dug out of the rock!
 
-Now let's put the room in a random location everytime we start the game.
+Now let's put the room in a random location every time we start the game.
 
-[Lodash](https://lodash.com/) is a great utility library for javascript that end up is in most of my project at some point. It has a simple random number generator we'll use. You're welcome to use a more robust rng with support for seeds if you want but we won't be covering anything like that in this tutorial.
+[Lodash](https://lodash.com/) is a great utility library for javascript that ends up in most of my projects at some point. It has a simple random number generator we'll use. You're welcome to use a more robust rng with support for seeds if you want but we won't be covering anything like that in this tutorial.
 
 In your terminal of choice from your projects root directory go ahead and install lodash:
 
@@ -160,7 +160,7 @@ Alright, lets go ahead and import the random function from lodash at the top of 
 
 ```diff
 +import { random } from "lodash";
-import ecs from "../state/ecs";
+import world from "../state/ecs";
 import { rectangle } from "./grid";
 ```
 
@@ -219,7 +219,7 @@ We'll go over the diff in a second but with our new code to generate multiple ro
 
 ```javascript
 import { random, times } from "lodash";
-import ecs from "../state/ecs";
+import world from "../state/ecs";
 import { rectangle, rectsIntersect } from "./grid";
 import { Appearance, Position } from "../state/components";
 
@@ -269,13 +269,13 @@ export const createDungeon = ({
     const tile = dungeon.tiles[key];
 
     if (tile.sprite === "WALL") {
-      const entity = ecs.createEntity();
+      const entity = world.createEntity();
       entity.add(Appearance, { char: "#", color: "#AAA" });
       entity.add(Position, dungeon.tiles[key]);
     }
 
     if (tile.sprite === "FLOOR") {
-      const entity = ecs.createEntity();
+      const entity = world.createEntity();
       entity.add(Appearance, { char: "•", color: "#555" });
       entity.add(Position, dungeon.tiles[key]);
     }
@@ -437,11 +437,11 @@ ecs.registerComponent(Appearance);
 ecs.registerComponent(Move);
 ecs.registerComponent(Position);
 
-export const player = ecs.createEntity();
+export const player = world.createEntity();
 player.add(Appearance, { char: "@", color: "#fff" });
 player.add(Position);
 
-export default ecs;
+export default world;
 ```
 
 Now head back to `./src/lib/dungeon` and where we will add the `IsBlocking` component to our wall entities.
@@ -457,7 +457,7 @@ Then add it to wall entities
 
 ```diff
 if (tile.sprite === "WALL") {
-  const entity = ecs.createEntity();
+  const entity = world.createEntity();
   entity.add(Appearance, { char: "#", color: "#AAA" });
 +  entity.add(IsBlocking);
   entity.add(Position, dungeon.tiles[key]);
@@ -474,13 +474,13 @@ Finally in movement we need to check if the location we want to move to has an e
 
 +    // check for blockers
 +    const blockers = [];
-+    for (const e of ecs.entities.all) {
-+      if (e.position.x === mx && e.position.y === my && e.isBlocking) {
++    for (const e of world.getEntities()) {
++      if (e[1].position.x === mx && e[1].position.y === my && e[1].isBlocking) {
 +        blockers.push(e);
 +      }
 +    }
 +    if (blockers.length) {
-+      entity.remove(Move);
++      entity.remove(entity.move);
 +      return;
 +    }
 

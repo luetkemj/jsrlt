@@ -115,7 +115,7 @@ If you try our the game now you should see the player name in the top left of th
 
 Let's add a health bar just below it.
 
-To do that we'll render a grayed version below a colored version that will become shorter as our health diminishes. As our @ loses health this will create the illusion that our hearts are changing from ref to gray.
+To do that we'll render a grayed version below a colored version that will become shorter as our health diminishes. As our @ loses health this will create the illusion that our hearts are changing from red to gray.
 
 Render the gray version of our health bar
 
@@ -161,17 +161,18 @@ ecs.registerPrefab(Player);
 +  messageLog.unshift(text);
 +};
 
-export default ecs;
+const world = ecs.createWorld();
+export default world;
 ```
 
 Now in our movement system `./src/systems/movement.js` we can import our `addLog` function and change all of our console logs to addLogs.
 
 ```diff
--import ecs from "../state/ecs";
-+import ecs, { addLog } from "../state/ecs";
-import { addCacheSet, deleteCacheSet, readCacheSet } from "../state/cache";
-import { grid } from "../lib/canvas";
-import { Move } from "../state/components";
+import { grid } from '../lib/canvas';
+import { addCacheSet, deleteCacheSet, readCacheSet } from '../state/cache';
+import { Ai, Defense, Health, IsBlocking, IsDead, Layer300, Move } from '../state/components';
+-import world from '../state/ecs'
++import world, { addLog } from '../state/ecs'
 ```
 
 ```diff
@@ -206,7 +207,7 @@ if (target.has("Health") && target.has("Defense")) {
 
 Finally we need to actually render the log in our render system `./src/systems/render.js`
 
-We are going to explicity render the first three messages of our log. As new messages are added to the beginning, older ones will fall off. They will still be stored in the array - we just won't render them.
+We are going to explicitly render the first three messages of our log. As new messages are added to the beginning, older ones will fall off. They will still be stored in the array - we just won't render them.
 
 First import `messageLog` to our render system:
 
@@ -286,15 +287,15 @@ canvas.onmousemove = throttle((e) => {
   if (entitiesAtLoc) {
     entitiesAtLoc
       .filter((eId) => {
-        const entity = ecs.getEntity(eId);
+        const entity = world.getEntity(eId);
         return (
-          layer100Entities.isMatch(entity) ||
-          layer300Entities.isMatch(entity) ||
-          layer400Entities.isMatch(entity)
+          layer100Entities.matches(entity) ||
+          layer300Entities.matches(entity) ||
+          layer400Entities.matches(entity)
         );
       })
       .forEach((eId) => {
-        const entity = ecs.getEntity(eId);
+        const entity = world.getEntity(eId);
         clearInfoBar();
 
         if (entity.isInFov) {
@@ -365,15 +366,15 @@ If there are any entities at the current location we use our layer queries to fi
 if (entitiesAtLoc) {
   entitiesAtLoc
     .filter((eId) => {
-      const entity = ecs.getEntity(eId);
+      const entity = world.getEntity(eId);
       return (
-        layer100Entities.isMatch(entity) ||
-        layer300Entities.isMatch(entity) ||
-        layer400Entities.isMatch(entity)
+        layer100Entities.matches(entity) ||
+        layer300Entities.matches(entity) ||
+        layer400Entities.matches(entity)
       );
     })
     .forEach((eId) => {
-      const entity = ecs.getEntity(eId);
+      const entity = world.getEntity(eId);
       clearInfoBar();
 
       if (entity.isInFov) {
@@ -399,4 +400,4 @@ if (entitiesAtLoc) {
 
 Our game is looking better and should make a lot more sense to a first time user. If you want anyone else to play your game (and it's ok if you don't!) these sorts of UI enhancements are critical.
 
-In [part 8](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part8.md) we will need to expand on the UI a bit as we and items and inventory!
+In [part 8](https://github.com/luetkemj/jsrlt/blob/master/tutorial/part8.md) we will need to expand on the UI a bit as we add items and inventory!
