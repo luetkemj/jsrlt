@@ -37,6 +37,6 @@ Additional shout out to [@ddmills](https://github.com/ddmills). He gave me some 
 - [x] [Part 12 - Increasing Difficulty](https://github.com/dcazrael/jsrlt/blob/master/tutorial/part12.md)
 - [x] [Part 13 - Gearing up](https://github.com/dcazrael/jsrlt/blob/master/tutorial/part13.md)
 
-[Repo of the tutorial project Gobs O' Goblins is available here.](hhttps://github.com/dcazrael/gobs-o-goblins)
+[Repo of the tutorial project Gobs O' Goblins is available here.](https://github.com/dcazrael/gobs-o-goblins)
 
 [The original Roguelike Tutorial - TCOD](http://rogueliketutorials.com/tutorials/tcod/)
