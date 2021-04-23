@@ -96,12 +96,12 @@ And finally let's actually add them to the map in `./src/index.js`:
 ```diff
 times(5, () => {
   const tile = sample(openTiles);
-  ecs.createPrefab("Goblin").add(Position, { x: tile.x, y: tile.y });
+  world.createPrefab("Goblin").add(Position, { x: tile.x, y: tile.y });
 });
 
 +times(5, () => {
 +  const tile = sample(openTiles);
-+  ecs.createPrefab("HealthPotion").add(Position, { x: tile.x, y: tile.y });
++  world.createPrefab("HealthPotion").add(Position, { x: tile.x, y: tile.y });
 +});
 ```
 
@@ -113,15 +113,52 @@ Run the game! You should see some potions lying on the dungeon floor (!)
 
 Of course our @ needs a place to store the things it picks up. Time to add an inventory!
 
-Yet again, we'll start by adding a new component. In `./src/state/components.js` add an `Inventory`. It will only need a list property for storing an array of item entities. We let geotic know this by setting the list property value to the string "<EntityArray>".
+Yet again, we'll start by adding a new component. In `./src/state/components.js` add an `Inventory`. It will only need a inventoryItemIds property for storing an array of item ids as well as a useful "getter" method.
 
 ```javascript
+import { getEntityArrayRef } from '../utils/ecs-refs'
+
 export class Inventory extends Component {
   static properties = {
-    list: "<EntityArray>",
+    inventoryItemIds: [],
   };
+
+  get inventoryItems() {
+    return getEntityArrayRef(this, 'inventoryItemIds');
 }
 ```
+
+This "getter" function will be one of our utility functions.
+In simple terms it takes the item ids and returns the entities back. With this, we have an easy access to the entities, without calling the world.getEntity() method every time.
+
+Go ahead and create a new file called `ecs-refs.js` at `./src/utils/ecs-refs.js`.
+
+Make the file look like this:
+
+```js
+export const getEntityArrayRef = (entity, idArrayProp) => {
+  const ids = entity[idArrayProp];
+  const newIds = [];
+  const entities = [];
+
+  for (const id of ids) {
+    const targetEntity = entity.world.getEntity(id);
+
+    if (!targetEntity) {
+      entity[idProp] = undefined;
+    } else {
+      newIds.push(id);
+      entities.push(targetEntity);
+    }
+  }
+
+  entity[idArrayProp] = newIds;
+
+  return entities;
+};
+```
+
+With that out of the way, let's continue with our inventory.
 
 As always, register it in `./src/state.ecs.js`.
 
@@ -173,27 +210,34 @@ In `./src/state/components.js` add `onPickUp` and `onDrop` events to the Invento
 ```diff
 export class Inventory extends Component {
   static properties = {
-    list: [],
+    inventoryItemIds: [],
   };
 
 +  onPickUp(evt) {
-+    this.list.push(evt.data);
++    this.inventoryItemIds.push(evt.data);
 +
 +    if (evt.data.position) {
-+      evt.data.remove("Position");
++      evt.data.remove(evt.data.position);
++      evt.data.remove(evt.data.isPickup);
 +    }
 +  }
 +
 +  onDrop(evt) {
-+    remove(this.list, (x) => x.id === evt.data.id);
-+    evt.data.add("Position", this.entity.position);
++    this.inventoryItemIds = this.inventoryItemIds.filter(
++      (itemId) => itemId !== evt.data.id
++    );
++    evt.data.add(Position, {
++      x: this.entity.position.x,
++      y: this.entity.position.y,
++    });
++    evt.data.add(IsPickup);
 +  }
 }
 ```
 
 We already take advantage of the `onAttached` lifecycle method in our `Position` component. This event fires automatically when the add method is called on an entity and we use it to populate our entitiesAtLocation cache.
 
-We can also take advantage of the `onDetached` lifecyle method to remove entities from the cache like so:
+We can also take advantage of the `onDestroyed` lifecyle method to remove entities from the cache like so:
 
 ```diff
 export class Position extends Component {
@@ -204,7 +248,7 @@ export class Position extends Component {
     addCacheSet("entitiesAtLocation", locId, this.entity.id);
   }
 
-+  onDetached() {
++  onDestroyed() {
 +    const locId = `${this.x},${this.y}`;
 +    deleteCacheSet("entitiesAtLocation", locId, this.entity.id);
 +  }
@@ -216,8 +260,8 @@ Now that we have our eventing setup we just need to create keybindings to fire t
 We will want to add some logging when things picked up and dropped so import the addLog function at the top of `./src/index.js`.
 
 ```diff
--import ecs from "./state/ecs";
-+import ecs, { addLog } from "./state/ecs";
+-import world from "./state/ecs";
++import world, { addLog } from "./state/ecs";
 ```
 
 In the same file add the keybindings for (g)Get and (d)Drop
@@ -231,7 +275,7 @@ if (userInput === "ArrowLeft") {
 +  let pickupFound = false;
 +  readCacheSet("entitiesAtLocation", toLocId(player.position)).forEach(
 +    (eId) => {
-+      const entity = ecs.getEntity(eId);
++      const entity = world.getEntity(eId);
 +      if (entity.isPickup) {
 +        pickupFound = true;
 +        player.fireEvent("pick-up", entity);
@@ -245,8 +289,8 @@ if (userInput === "ArrowLeft") {
 +}
 +
 +if (userInput === "d") {
-+  if (player.inventory.list.length) {
-+    player.fireEvent("drop", player.inventory.list[0]);
++  if (player.inventory.inventoryItems.length) {
++    player.fireEvent("drop", player.inventory.inventoryItems[0]);
 +  }
 +}
 
@@ -266,7 +310,7 @@ After that we read from our entitiesAtLocation cache and iterate through everyth
 
 ```javascript
 readCacheSet("entitiesAtLocation", toLocId(player.position)).forEach((eId) => {
-  const entity = ecs.getEntity(eId);
+  const entity = world.getEntity(eId);
   if (entity.isPickup) {
     pickupFound = true;
     player.fireEvent("pick-up", entity);
@@ -287,9 +331,9 @@ Next we add a keybinding for `d`. For now we just check if there is anything in 
 
 ```javascript
 if (userInput === "d") {
-  if (player.inventory.list.length) {
-    addLog(`You drop a ${player.inventory.list[0].description.name}`);
-    player.fireEvent("drop", player.inventory.list[0]);
+  if (player.inventory.inventoryItems.length) {
+    addLog(`You drop a ${player.inventory.inventoryItems[0].description.name}`);
+    player.fireEvent("drop", player.inventory.inventoryItems[0]);
   }
 }
 ```
@@ -365,11 +409,11 @@ if (gameState === "INVENTORY") {
     y: grid.inventory.y,
   });
 
-  if (player.inventory.list.length) {
-    player.inventory.list.forEach((entity, idx) => {
+  if (player.inventory.inventoryItemIds.length) {
+    player.inventory.inventoryItems.forEach((item, idx) => {
       drawText({
         text: `${idx === selectedInventoryIndex ? "*" : " "}${
-          entity.description.name
+          item.description.name
         }`,
         background: "black",
         color: "white",
@@ -468,7 +512,7 @@ const processUserInput = () => {
       let pickupFound = false;
       readCacheSet("entitiesAtLocation", toLocId(player.position)).forEach(
         (eId) => {
-          const entity = ecs.getEntity(eId);
+          const entity = world.getEntity(eId);
           if (entity.isPickup) {
             pickupFound = true;
             player.fireEvent("pick-up", entity);
@@ -500,14 +544,15 @@ const processUserInput = () => {
 
     if (userInput === "ArrowDown") {
       selectedInventoryIndex += 1;
-      if (selectedInventoryIndex > player.inventory.list.length - 1)
-        selectedInventoryIndex = player.inventory.list.length - 1;
+      if (selectedInventoryIndex > player.inventory.inventoryItems.length - 1)
+        selectedInventoryIndex = player.inventory.inventoryItems.length - 1;
     }
 
     if (userInput === "d") {
-      if (player.inventory.list.length) {
-        addLog(`You drop a ${player.inventory.list[0].description.name}`);
-        player.fireEvent("drop", player.inventory.list[0]);
+      if (player.inventory.inventoryItems.length) {
+        const entity = player.inventory.inventoryItems[selectedInventoryIndex];
+        addLog(`You drop a ${entity.description.name}`);
+        player.fireEvent("drop", entity);
       }
     }
 
@@ -542,7 +587,7 @@ export class Effects extends Component {
 }
 ```
 
-Up to now our entities have only supported a single component of any given type. The line `static allowMultiple = true;` tells Geotic we want to allow multiple components of this type on an entity. Each `Effect` or `ActiveEffect` contains two properties - a component name and a delta. This will allow us to easily create potions that effect different components on en entity like health and or power. We can also play with the delta (the net change in the component value) to create a health potion with a delta of 5 or a poison with a delta of -5.
+Up to now our entities have only supported a single component of any given type. The line `static allowMultiple = true;` tells Geotic we want to allow multiple components of this type on an entity. Each `Effect` or `ActiveEffect` contains two properties - a component name and a delta. This will allow us to easily create potions that effect different components on an entity like health and or power. We can also play with the delta (the net change in the component value) to create a health potion with a delta of 5 or a poison with a delta of -5.
 
 But before we get ahead of ourselves let's register our new components in `./src/state/ecs.js`:
 
@@ -594,10 +639,10 @@ export const HealthPotion = {
 Now for our effects system. Add a new file `effect.js` at `./src/systems/effects.js` it should look like this:
 
 ```javascript
-import ecs from "../state/ecs";
-const { ActiveEffects } = require("../state/components");
+import world from "../state/ecs";
+import { ActiveEffects } from "../state/components";
 
-const activeEffectsEntities = ecs.createQuery({
+const activeEffectsEntities = world.createQuery({
   all: [ActiveEffects],
 });
 
@@ -612,7 +657,7 @@ export const effects = () => {
         }
       }
 
-      c.remove();
+      c.destroy();
     });
   });
 };
@@ -628,26 +673,69 @@ Add another keybinding (c)Consume in `./src/index.js` right before (d)Drop like 
 
 ```javascript
 if (userInput === "c") {
-  const entity = player.inventory.list[selectedInventoryIndex];
+  const entity = world.getEntity(
+    player.inventory.inventoryItemIds[selectedInventoryIndex]
+  );
 
   if (entity) {
-    if (entity.has("Effects")) {
+    if (entity.has(Effects)) {
       // clone all effects and add to self
-      entity
-        .get("Effects")
-        .forEach((x) => player.add("ActiveEffects", { ...x.serialize() }));
+      entity.effects.forEach((x) =>
+        player.add(ActiveEffects, { ...x.serialize() })
+      );
     }
 
     addLog(`You consume a ${entity.description.name}`);
-    entity.destroy();
+    player.inventory.inventoryItemIds = player.inventory.inventoryItemIds.filter(
+      (itemId) => itemId !== entity.id
+    );
 
-    if (selectedInventoryIndex > player.inventory.list.length - 1)
-      selectedInventoryIndex = player.inventory.list.length - 1;
+    selectedInventoryIndex = 0;
   }
 }
 ```
 
-Consume does a few things. First it gets the currently selected item in your inventory. If it has effects components, it clones each of them and adds them to the player as ActiveEffects. A helpful message is logged to and the item is destroyed. Remember all the way at the beginning when we set the items property on the inventory component to an "<EntityArray>"? Geotic keeps track of those entities so when we destroy one it is automatically removed from the inventory list. Pretty nice :)
+Consume does a few things. First it gets the currently selected item in your inventory. If it has effects components, it clones each of them and adds them to the player as ActiveEffects. A helpful message is logged to and the item is destroyed. To make our lives a little bit easier, we should create a `OnConsume` event, which will handle the removal of items.
+
+Back in the `Inventory.js` file, we want to add a new function right below `onDrop`.
+Same as `onPickUp` and `onDrop` the new function will also expect an entity.
+
+```js
+onConsume(evt) {
+    this.inventoryItemIds = this.inventoryItemIds.filter(
+      (itemId) => itemId !== evt.data.id
+    );
+
+    evt.data.destroy();
+  }
+```
+
+Now we can change the long filter function into something super simple.
+
+```diff
+if (userInput === "c") {
+  const entity = world.getEntity(
+    player.inventory.inventoryItemIds[selectedInventoryIndex]
+  );
+
+  if (entity) {
+    if (entity.has(Effects)) {
+      // clone all effects and add to self
+      entity.effects.forEach((x) =>
+        player.add(ActiveEffects, { ...x.serialize() })
+      );
+    }
+
+    addLog(`You consume a ${entity.description.name}`);
+-    player.inventory.inventoryItemIds = player.inventory.inventoryItemIds.filter(
+-      (itemId) => itemId !== entity.id
+-    );
++    player.fireEvent('consume', entity);
+
+    selectedInventoryIndex = 0;
+  }
+}
+```
 
 All that's left is to call the new effects system itself.
 
@@ -666,15 +754,15 @@ const update = () => {
   }
 
   if (playerTurn && userInput && gameState === "INVENTORY") {
-    processUserInput();
 +   effects();
+    processUserInput();
     render(player);
     playerTurn = true;
   }
 
   if (playerTurn && userInput && gameState === "GAME") {
-    processUserInput();
 +   effects();
+    processUserInput();
     movement();
     fov(player);
     render(player);
@@ -685,8 +773,8 @@ const update = () => {
   }
 
   if (!playerTurn) {
-    ai(player);
 +   effects();
+    ai(player);
     movement();
     fov(player);
     render(player);

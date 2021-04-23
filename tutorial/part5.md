@@ -4,7 +4,7 @@ We can finally walk around the dungeon - but it appears nobody's home. This tuto
 
 Let's start by adding some goblins to our dungeon. Our first challenge is to figure our where we can place our them. We don't want them stuck in walls or on top of the player or each other.
 
-Currently our dungeon has walls and floors. Floors are nonblocking and usually empty. Lets get an array of all of the floor locations for a basic start.
+Currently our dungeon has walls and floors. Floors are non-blocking and usually empty. Lets get an array of all of the floor locations for a basic start.
 
 In `./src/index.js` make this change:
 
@@ -30,7 +30,7 @@ const openTiles = Object.values(dungeon.tiles).filter(
 +times(5, () => {
 +  const tile = sample(openTiles);
 +
-+  const goblin = ecs.createEntity();
++  const goblin = world.createEntity();
 +  goblin.add(Appearance, { char: "g", color: "green" });
 +  goblin.add(Layer400);
 +  goblin.add(Position, { x: tile.x, y: tile.y });
@@ -52,7 +52,7 @@ import { fov } from "./systems/fov";
 import { movement } from "./systems/movement";
 import { render } from "./systems/render";
 -import { player } from "./state/ecs";
-+import ecs, { player } from "./state/ecs";
++import world, { player } from "./state/ecs";
 import {
 +  Appearance,
 +  Layer400,
@@ -69,7 +69,7 @@ Our dungeon now has some inhabitants! Although you may have noticed we can walk 
 times(5, () => {
   const tile = sample(openTiles);
 
-  const goblin = ecs.createEntity();
+  const goblin = world.createEntity();
   goblin.add(Appearance, { char: "g", color: "green" });
 +  goblin.add(IsBlocking);
   goblin.add(Layer400);
@@ -95,7 +95,7 @@ Now for the kicking part. In `./src/systems/movement.js` when blockers exist - l
 if (blockers.length) {
 +  console.log('Kick!')
 
-  entity.remove(Move);
+  entity.remove(entity.move);
   return;
 }
 ```
@@ -140,12 +140,12 @@ ecs.registerComponent(Layer400);
 ecs.registerComponent(Move);
 ecs.registerComponent(Position);
 
-export const player = ecs.createEntity();
+export const player = world.createEntity();
 player.add(Appearance, { char: "@", color: "#fff" });
 player.add(Layer400);
 +player.add(Description, { name: 'You' })
 
-export default ecs;
+export default world;
 ```
 
 We need to import the component add it to our goblins in `./src/index.js`:
@@ -165,7 +165,7 @@ import {
 times(100, () => {
   const tile = sample(openTiles);
 
-  const goblin = ecs.createEntity();
+  const goblin = world.createEntity();
   goblin.add(Appearance, { char: "g", color: "green" });
 +  goblin.add(Description, { name: "goblin" });
   goblin.add(IsBlocking);
@@ -189,7 +189,7 @@ import {
 
 ```diff
 if (tile.sprite === "WALL") {
-  const entity = ecs.createEntity();
+  const entity = world.createEntity();
   entity.add(Appearance, { char: "#", color: "#AAA" });
 +  entity.add(Description, { name: "wall" });
   entity.add(IsBlocking);
@@ -199,7 +199,7 @@ if (tile.sprite === "WALL") {
 }
 
 if (tile.sprite === "FLOOR") {
-  const entity = ecs.createEntity();
+  const entity = world.createEntity();
   entity.add(Appearance, { char: "•", color: "#555" });
 +  entity.add(Description, { name: "floor" });
   entity.add(Position, dungeon.tiles[key]);
@@ -214,7 +214,8 @@ blockers.forEach((eId) => {
   const attacker =
     (entity.description && entity.description.name) || "something";
   const target =
-    (ecs.getEntity(eId).description && ecs.getEntity(eId).description.name) ||
+    (world.getEntity(eId).description &&
+      world.getEntity(eId).description.name) ||
     "something";
   console.log(`${attacker} kicked a ${target}!`);
 });
@@ -246,7 +247,7 @@ document.addEventListener("keydown", (ev) => {
 });
 ```
 
-The gameloop will also handle running our systems so we can delete them from processUserInput. We also need to clear userInput after it's been processed for our loop to work correctly. We can just set it null at the end.
+The game loop will also handle running our systems so we can delete them from processUserInput. We also need to clear userInput after it's been processed for our loop to work correctly. We can just set it null at the end.
 
 ```diff
 const processUserInput = () => {
@@ -270,7 +271,7 @@ const processUserInput = () => {
 };
 ```
 
-Our gameloop is pretty simple, looks like this, and will live in `./src/index.js` at the very bottom:
+Our game loop is pretty simple, looks like this, and will live in `./src/index.js` at the very bottom:
 
 ```javascript
 const gameLoop = () => {
@@ -306,7 +307,7 @@ const update = () => {
 };
 ```
 
-Everytime this function runs we test if it's the player's turn AND they have pushed a key `userInput`. If both of those are true, we run our player systems and set playerTurn to false. If playerTurn is false, we run our monster systems giving them a turn.
+Every time this function runs we test if it's the player's turn AND they have pushed a key `userInput`. If both of those are true, we run our player systems and set playerTurn to false. If playerTurn is false, we run our monster systems giving them a turn.
 
 If it's the player's turn but they haven't push a key yet, the loop just goes back around without doing anything. It's a no-op.
 
@@ -315,10 +316,10 @@ We can test this by adding an "ai" system. It should only run on the monster's t
 Our ai system is super simple for now. Create a new file called `ai.js` at `./src/systems/ai.js` and make it look like this:
 
 ```javascript
-import ecs from "../state/ecs";
+import world from "../state/ecs";
 import { Ai, Description } from "../state/components";
 
-const aiEntities = ecs.createQuery({
+const aiEntities = world.createQuery({
   all: [Ai, Description],
 });
 
@@ -371,7 +372,7 @@ import { createDungeon } from "./lib/dungeon";
 import { fov } from "./systems/fov";
 import { movement } from "./systems/movement";
 import { render } from "./systems/render";
-import ecs, { player } from "./state/ecs";
+import world, { player } from "./state/ecs";
 import {
 +  Ai,
   Appearance,
@@ -382,7 +383,7 @@ import {
 Then we add the component to our goblins:
 
 ```diff
-  const goblin = ecs.createEntity();
+  const goblin = world.createEntity();
 +  goblin.add(Ai);
   goblin.add(Appearance, { char: "g", color: "green" });
   goblin.add(Description, { name: "goblin" });

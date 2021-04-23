@@ -93,7 +93,7 @@ const loadGame = () => {
     return;
   }
 
-  for (let entity of ecs.entities.all) {
+  for (let entity of world.entities.all) {
     entity.destroy();
   }
 +  clearCache();
@@ -112,32 +112,32 @@ const dungeon = createDungeon({
 ```diff
   times(5, () => {
     const tile = sample(openTiles);
--    ecs.createPrefab("Goblin").add(Position, { x: tile.x, y: tile.y });
-+    ecs.createPrefab("Goblin").add(Position, tile);
+-    world.createPrefab("Goblin").add(Position, { x: tile.x, y: tile.y });
++    world.createPrefab("Goblin").add(Position, tile);
   });
 
   times(10, () => {
     const tile = sample(openTiles);
--    ecs.createPrefab("HealthPotion").add(Position, { x: tile.x, y: tile.y });
-+    ecs.createPrefab("HealthPotion").add(Position, tile);
+-    world.createPrefab("HealthPotion").add(Position, { x: tile.x, y: tile.y });
++    world.createPrefab("HealthPotion").add(Position, tile);
   });
 
   times(10, () => {
     const tile = sample(openTiles);
--    ecs.createPrefab("ScrollLightning").add(Position, { x: tile.x, y: tile.y });
-+    ecs.createPrefab("ScrollLightning").add(Position, tile);
+-    world.createPrefab("ScrollLightning").add(Position, { x: tile.x, y: tile.y });
++    world.createPrefab("ScrollLightning").add(Position, tile);
   });
 
   times(10, () => {
     const tile = sample(openTiles);
--    ecs.createPrefab("ScrollParalyze").add(Position, { x: tile.x, y: tile.y });
-+    ecs.createPrefab("ScrollParalyze").add(Position, tile);
+-    world.createPrefab("ScrollParalyze").add(Position, { x: tile.x, y: tile.y });
++    world.createPrefab("ScrollParalyze").add(Position, tile);
   });
 
   times(10, () => {
     const tile = sample(openTiles);
--    ecs.createPrefab("ScrollFireball").add(Position, { x: tile.x, y: tile.y });
-+    ecs.createPrefab("ScrollFireball").add(Position, tile);
+-    world.createPrefab("ScrollFireball").add(Position, { x: tile.x, y: tile.y });
++    world.createPrefab("ScrollFireball").add(Position, tile);
   });
 ```
 
@@ -178,16 +178,16 @@ if (gameState === "TARGETING") {
 +    const targets = circle({ x, y }, entity.requiresTarget.aoeRange).map(
 +      (locId) => `${locId},${readCache("z")}`
 +    );
-    targets.forEach((locId) => player.add("Target", { locId }));
+    targets.forEach((locId) => player.add(Target, { locId }));
   } else {
-    player.add("Target", { locId });
+    player.add(Target, { locId });
 ```
 
 ### `./src/lib/dungeon.js`
 
 ```diff
 import { random, times } from "lodash";
-import ecs from "../state/ecs";
+import world from "../state/ecs";
 import { rectangle, rectsIntersect } from "./grid";
 import { Position } from "../state/components";
 
@@ -293,13 +293,13 @@ export const createDungeon = ({
     const tile = dungeon.tiles[key];
 
     if (tile.sprite === "WALL") {
--      ecs.createPrefab("Wall").add(Position, dungeon.tiles[key]);
-+      ecs.createPrefab("Wall").add(Position, { ...dungeon.tiles[key], z });
+-      world.createPrefab("Wall").add(Position, dungeon.tiles[key]);
++      world.createPrefab("Wall").add(Position, { ...dungeon.tiles[key], z });
     }
 
     if (tile.sprite === "FLOOR") {
--      ecs.createPrefab("Floor").add(Position, dungeon.tiles[key]);
-+      ecs.createPrefab("Floor").add(Position, { ...dungeon.tiles[key], z });
+-      world.createPrefab("Floor").add(Position, dungeon.tiles[key]);
++      world.createPrefab("Floor").add(Position, { ...dungeon.tiles[key], z });
     }
   });
 
@@ -394,7 +394,7 @@ export const idToCell = (id) => {
 ```diff
 import PF from "pathfinding";
 import { some, times } from "lodash";
-import ecs from "../state/ecs";
+import world from "../state/ecs";
 -import cache, { readCacheSet } from "../state/cache";
 +import { readCache, readCacheSet } from "../state/cache";
 import { toCell } from "./grid";
@@ -410,7 +410,7 @@ export const aStar = (start, goal) => {
   locIds.forEach((locId) => {
 -    if (
 -      some([...readCacheSet("entitiesAtLocation", locId)], (eId) => {
--        return ecs.getEntity(eId).isBlocking;
+-        return world.getEntity(eId).isBlocking;
 -      })
 -    ) {
 -      const cell = toCell(locId);
@@ -420,7 +420,7 @@ export const aStar = (start, goal) => {
 +    if (cell.z === readCache("z")) {
 +      if (
 +        some([...readCacheSet("entitiesAtLocation", locId)], (eId) => {
-+          return ecs.getEntity(eId).isBlocking;
++          return world.getEntity(eId).isBlocking;
 +        })
 +      ) {
 +        matrix[cell.y][cell.x] = 1;
@@ -462,12 +462,12 @@ export class Position extends Component {
 ### `./src/systems/ai.js`
 
 ```diff
-import ecs from "../state/ecs";
+import world from "../state/ecs";
 import { Ai, Description } from "../state/components";
 import { aStar } from "../lib/pathfinding";
 +import { readCache } from "../state/cache";
 
-const aiEntities = ecs.createQuery({
+const aiEntities = world.createQuery({
   all: [Ai, Description],
 });
 
@@ -475,8 +475,8 @@ const moveToTarget = (entity, target) => {
   const path = aStar(entity.position, target.position);
   if (path.length) {
     const newLoc = path[1];
--    entity.add("Move", { x: newLoc[0], y: newLoc[1], relative: false });
-+    entity.add("Move", { x: newLoc[0], y: newLoc[1], z: readCache("z"), relative: false });
+-    entity.add(Move, { x: newLoc[0], y: newLoc[1], relative: false });
++    entity.add(Move, { x: newLoc[0], y: newLoc[1], z: readCache("z"), relative: false });
   }
 };
 ```
@@ -517,11 +517,11 @@ if (entity.move.relative) {
 ```
 
 ```diff
-entity.remove("Position");
--entity.add("Position", { x: mx, y: my });
-+entity.add("Position", { x: mx, y: my, z: mz });
+entity.remove(entity.position);
+-entity.add(Position, { x: mx, y: my });
++entity.add(Position, { x: mx, y: my, z: mz });
 
-entity.remove(Move);
+entity.remove(entity.move);
 ```
 
 ### `./src/systems/render.js`
@@ -548,7 +548,7 @@ const renderInfoBar = (mPos) => {
   clearInfoBar();
 
   if (entitiesAtLoc) {
-    if (some(entitiesAtLoc, (eId) => ecs.getEntity(eId).isRevealed)) {
+    if (some(entitiesAtLoc, (eId) => world.getEntity(eId).isRevealed)) {
       drawCell({
         appearance: {
           char: "",
@@ -573,7 +573,7 @@ const renderTargeting = (mPos) => {
   clearInfoBar();
 
   if (entitiesAtLoc) {
-    if (some(entitiesAtLoc, (eId) => ecs.getEntity(eId).isRevealed)) {
+    if (some(entitiesAtLoc, (eId) => world.getEntity(eId).isRevealed)) {
       drawCell({
         appearance: {
           char: "",
@@ -655,11 +655,12 @@ Go ahead and register them in `./src/state/ecs.js`
 ```
 
 ```diff
-ecs.registerPrefab(ScrollParalyze);
-+ecs.registerPrefab(StairsUp);
-+ecs.registerPrefab(StairsDown);
+world.registerPrefab(ScrollParalyze);
++world.registerPrefab(StairsUp);
++world.registerPrefab(StairsDown);
 
-export default ecs;
+const world = ecs.createWorld();
+export default world;
 ```
 
 We want to generate levels as they are needed - when a players descends to a new and deeper depth. Currently we only generate a single level in `addCache,`. We'll need to break that up into a few different functions that can be called as needed.
@@ -690,7 +691,7 @@ Next go ahead and delete the entire `initGame` function.
 -    height: grid.map.height,
 -  });
 -
--  player = ecs.createPrefab("Player");
+-  player = world.createPrefab("Player");
 -  player.add(Position, {
 -    x: dungeon.rooms[0].center.x,
 -    y: dungeon.rooms[0].center.y,
@@ -702,27 +703,27 @@ Next go ahead and delete the entire `initGame` function.
 -
 -  times(5, () => {
 -    const tile = sample(openTiles);
--    ecs.createPrefab("Goblin").add(Position, tile);
+-    world.createPrefab("Goblin").add(Position, tile);
 -  });
 -
 -  times(10, () => {
 -    const tile = sample(openTiles);
--    ecs.createPrefab("HealthPotion").add(Position, tile);
+-    world.createPrefab("HealthPotion").add(Position, tile);
 -  });
 -
 -  times(10, () => {
 -    const tile = sample(openTiles);
--    ecs.createPrefab("ScrollLightning").add(Position, tile);
+-    world.createPrefab("ScrollLightning").add(Position, tile);
 -  });
 -
 -  times(10, () => {
 -    const tile = sample(openTiles);
--    ecs.createPrefab("ScrollParalyze").add(Position, tile);
+-    world.createPrefab("ScrollParalyze").add(Position, tile);
 -  });
 -
 -  times(10, () => {
 -    const tile = sample(openTiles);
--    ecs.createPrefab("ScrollFireball").add(Position, tile);
+-    world.createPrefab("ScrollFireball").add(Position, tile);
 -  });
 -
 -  fov(player);
@@ -751,27 +752,27 @@ const createDungeonLevel = ({
 
   times(5, () => {
     const tile = sample(openTiles);
-    ecs.createPrefab("Goblin").add(Position, tile);
+    world.createPrefab("Goblin").add(Position, tile);
   });
 
   times(10, () => {
     const tile = sample(openTiles);
-    ecs.createPrefab("HealthPotion").add(Position, tile);
+    world.createPrefab("HealthPotion").add(Position, tile);
   });
 
   times(10, () => {
     const tile = sample(openTiles);
-    ecs.createPrefab("ScrollLightning").add(Position, tile);
+    world.createPrefab("ScrollLightning").add(Position, tile);
   });
 
   times(10, () => {
     const tile = sample(openTiles);
-    ecs.createPrefab("ScrollParalyze").add(Position, tile);
+    world.createPrefab("ScrollParalyze").add(Position, tile);
   });
 
   times(10, () => {
     const tile = sample(openTiles);
-    ecs.createPrefab("ScrollFireball").add(Position, tile);
+    world.createPrefab("ScrollFireball").add(Position, tile);
   });
 
   let stairsUp, stairsDown;
@@ -779,7 +780,7 @@ const createDungeonLevel = ({
   if (createStairsUp) {
     times(1, () => {
       const tile = sample(openTiles);
-      stairsUp = ecs.createPrefab("StairsUp");
+      stairsUp = world.createPrefab("StairsUp");
       stairsUp.add(Position, tile);
     });
   }
@@ -787,7 +788,7 @@ const createDungeonLevel = ({
   if (createStairsDown) {
     times(1, () => {
       const tile = sample(openTiles);
-      stairsDown = ecs.createPrefab("StairsDown");
+      stairsDown = world.createPrefab("StairsDown");
       stairsDown.add(Position, tile);
     });
   }
@@ -798,6 +799,74 @@ const createDungeonLevel = ({
 
 This function now contains all the dungeon creating logic that was in `initGame`. In addition to that it can optionally add stairs - we won't want another downstairs on the last level or an upstairs on the first.
 
+Let's take this opportunity and refactor a tiny bit more. We can move the sampling for open tiles into it's own function. This not only moves one more responsibility from the createDungeonLevel function, but also let's us use the "component" in other functions.
+
+```diff
++ const getOpenTiles = (dungeon) => {
++   const openTiles = Object.values(dungeon.tiles).filter(
++     (x) => x.sprite === 'FLOOR'
++   );
++   return sample(openTiles);
++ };
+
+
+const createDungeonLevel = ({
+  createStairsUp = true,
+  createStairsDown = true,
+} = {}) => {
+  const dungeon = createDungeon({
+    x: grid.map.x,
+    y: grid.map.y,
+    z: readCache('z'),
+    width: grid.map.width,
+    height: grid.map.height,
+  });
+
+-  const openTiles = Object.values(dungeon.tiles).filter(
+-    (x) => x.sprite === 'FLOOR'
+-  );
+
+  times(5, () => {
+    const tile = sample(openTiles);
+    world.createPrefab('Goblin').add(Position, tile);
+  });
+```
+
+We can now replace remove all the instances of `const tile` and replace `tile` for our generated function.
+
+```diff
+  times(5, () => {
+-    const tile = sample(openTiles);
+-    world.createPrefab('Goblin').add(Position, tile);
++    world.createPrefab('Goblin').add(Position, getOpenTiles(dungeon));
+  });
+
+  times(10, () => {
+-    const tile = sample(openTiles);
+-    world.createPrefab('HealthPotion').add(Position, tile);
++    world.createPrefab('HealthPotion').add(Position, getOpenTiles(dungeon));
+  });
+
+  times(10, () => {
+-    const tile = sample(openTiles);
+-    world.createPrefab('ScrollLightning').add(Position, tile);
++    world.createPrefab('ScrollLightning').add(Position, getOpenTiles(dungeon));
+  });
+
+  times(10, () => {
+-    const tile = sample(openTiles);
+-    world.createPrefab('ScrollParalyze').add(Position, tile);
++    world.createPrefab('ScrollParalyze').add(Position, getOpenTiles(dungeon));
+  });
+
+  times(10, () => {
+-    const tile = sample(openTiles);
+-    world.createPrefab('ScrollFireball').add(Position, tile);
++    world.createPrefab('ScrollFireball').add(Position, getOpenTiles(dungeon));
+  });
+```
+
+This is all for our small refactor.
 Next add another function called `goToDungeonLevel`
 
 ```javascript
@@ -805,86 +874,86 @@ const goToDungeonLevel = (level) => {
   const goingUp = readCache("z") < level;
   const floor = readCache("floors")[level];
 
-  if (floor) {
-    addCache("z", level);
-    player.remove(Position);
-    if (goingUp) {
-      player.add(Position, toCell(floor.stairsDown));
-    } else {
-      player.add(Position, toCell(floor.stairsUp));
-    }
-  } else {
-    addCache("z", level);
-    const { stairsUp, stairsDown } = createDungeonLevel();
+  addCache("z", level);
+  player.remove(player.position);
+
+  let newPosition = goingUp ? floor?.stairsDown : floor?.stairsUp;
+
+  if (!floor) {
+    const { stairsDown, stairsUp } = createDungeonLevel();
 
     addCache(`floors.${level}`, {
-      stairsUp: toLocId(stairsUp.position),
       stairsDown: toLocId(stairsDown.position),
+      stairsUp: toLocId(stairsUp.position),
     });
 
-    player.remove(Position);
-
-    if (goingUp) {
-      player.add(Position, toCell(stairsDown.position));
-    } else {
-      player.add(Position, toCell(stairsUp.position));
-    }
+    newPosition = goingUp ? stairsDown.position : stairsUp.position;
   }
+
+  player.add(Position, toCell(newPosition));
 
   fov(player);
   render(player);
 };
 ```
 
-This function is responsible for loading a level if it already exists or creating a new one if needed. At the top of the function we store two variables `goingUp` and `floor`. The variable `floor` is used to check if the floor exists or not. If it does we check `goingUp` to decide at which stairs to place the player. If `floor` does not exist we need to create one and add the stairs to cache. Finally we run the `fov` and `render` systems.
+This function is responsible for loading a level if it already exists or creating a new one if needed. At the top of the function we store two variables `goingUp` and `floor`.
+`goingUp` will be used to get our direction. We simply use a ternary operator to make the decision. Note here, that we are only concerned with the values of floor. If floor doesn't exist, newPosition remains empty. Afterward the variable `floor` is used to check if the floor exists or not. If `floor` does not exist we need to create one and add the stairs to cache. Here we assign the value for newPosition. The position of the player will be added with the values of newPosition. Finally we run the `fov` and `render` systems.
 
 Now we can add back the `initGame` function, far smaller this time.
 
 ```javascript
 const initGame = () => {
-  const { stairsDown } = createDungeonLevel({ createStairsUp: false });
+  const { dungeon, stairsDown, stairsUp } = createDungeonLevel({
+    createStairsUp: false,
+  });
 
-  player = ecs.createPrefab("Player");
+  player = world.createPrefab("Player");
 
   addCache(`floors.${-1}`, {
     stairsDown: toLocId(stairsDown.position),
   });
 
-  player.add(Position, stairsDown.position);
+  const playerSpawn = stairsUp ? stairsUp.position : getOpenTiles(dungeon);
+
+  player.add(Position, playerSpawn);
 
   fov(player);
   render(player);
 };
 ```
 
-The `initGame` function is now only responsible for kicking off `createDungeonLevel`, creating the player and adding some things to cache.
+The `initGame` function is now only responsible for kicking off `createDungeonLevel`, creating the player and adding some things to cache. And as mentioned previously, we were able to use our getOpenTiles function, to generate stairs and place our player at the same position the stairs to the upper level are. We won't have to worry when we climb up, since that was our last position.
 
 With our code broken into reusable functions we can now add our keybindings in to call goToDungeonLevel and get our stairs working!
 
 ```diff
 if (gameState === "GAME") {
-+  if (userInput === ">") {
-+    if (
-+      toLocId(player.position) ==
-+      readCache(`floors.${readCache("z")}.stairsDown`)
-+    ) {
-+      addLog("You descend deeper into the dungeon");
-+      goToDungeonLevel(readCache("z") - 1);
-+    } else {
-+      addLog("There are no stairs to descend");
-+    }
-+  }
++    if (userInput === '>') {
++      if (
++        toLocId(player.position) !==
++        readCache(`floors.${readCache('z')}.stairsDown`)
++      ) {
++        addLog('There are no stairs to descend');
++        return;
++      }
 +
-+  if (userInput === "<") {
-+    if (
-+      toLocId(player.position) == readCache(`floors.${readCache("z")}.stairs`)
-+    ) {
-+      addLog("You climb from the depths of the dungeon");
-+      goToDungeonLevel(readCache("z") + 1);
-+    } else {
-+      addLog("There are no stairs to climb");
++      addLog('You descend deeper into the dungeon');
++      goToDungeonLevel(readCache('z') - 1);
 +    }
-+  }
++
++    if (userInput === '<') {
++      if (
++        toLocId(player.position) !==
++        readCache(`floors.${readCache('z')}.stairsUp`)
++      ) {
++        addLog('There are no stairs to climb');
++        return;
++      }
++
++      addLog('You climb from the depths of the dungeon');
++      goToDungeonLevel(readCache('z') + 1);
++    }
 
   if (userInput === "ArrowUp") {
     player.add(Move, { x: 0, y: -1, z: readCache("z") });
@@ -957,7 +1026,10 @@ drawText({
 });
 ```
 
-Next we need to add more keybindings to our "menu". Unfortunalely we're running out of space and can't fit the text required. We could solve this a number of different ways. We could make a proper menu like Inventory to give us a lot more real estate. We could remove the need for keybindings at all and have the stairs activate when a player bumps into the them. For this tutorial we're gonna take the cheap way out and just increase the height of our game by one. That will allow us to have 2 lines for our menu.
+Next we need to add more keybindings to our "menu". Unfortunately we're running out of space and can't fit the text required. We could solve this a number of different ways. We could make a proper menu like Inventory to give us a lot more real estate. We could remove the need for keybindings at all and have the stairs activate when a player bumps into the them. For this tutorial we're gonna take the cheap way out and just increase the height of our game by one. That will allow us to have 2 lines for our menu.
+
+As a fun exercise you can try to implement it.
+Hint: It involves adding a component to the stairs. Also check what we have done with blockers in the `movement.js` file.
 
 ```diff
 const renderMenu = () => {

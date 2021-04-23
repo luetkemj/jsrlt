@@ -38,12 +38,12 @@ Instead of calling `drawChar` directly we can now call `drawCell` and pass it an
 No just replace `drawChar` in `./src/systems/render.js` with `drawCell` and pass the entity in directly.
 
 ```diff
-import ecs from "../state/ecs";
+import world from "../state/ecs";
 import { Appearance, Position } from "../state/components";
 -import { clearCanvas, drawChar } from "../lib/canvas";
 +import { clearCanvas, drawCell } from "../lib/canvas";
 
-const renderableEntities = ecs.createQuery({
+const renderableEntities = world.createQuery({
   all: [Position, Appearance],
 });
 
@@ -113,11 +113,11 @@ ecs.registerComponent(IsBlocking);
 ecs.registerComponent(Move);
 ecs.registerComponent(Position);
 
-export const player = ecs.createEntity();
+export const player = world.createEntity();
 player.add(Appearance, { char: "@", color: "#fff" });
 player.add(Position);
 
-export default ecs;
+export default world;
 ```
 
 I like to number my layers in hundreds just in case I need to squeeze something in between. 100 is for the ground, 300 for things on the ground like items, and 400 is for the player.
@@ -135,7 +135,7 @@ import {
 
 ```diff
 if (tile.sprite === "WALL") {
-  const entity = ecs.createEntity();
+  const entity = world.createEntity();
   entity.add(Appearance, { char: "#", color: "#AAA" });
   entity.add(IsBlocking);
 +  entity.add(Layer100);
@@ -143,7 +143,7 @@ if (tile.sprite === "WALL") {
 }
 
 if (tile.sprite === "FLOOR") {
-  const entity = ecs.createEntity();
+  const entity = world.createEntity();
   entity.add(Appearance, { char: "•", color: "#555" });
 +  entity.add(Layer100);
   entity.add(Position, dungeon.tiles[key]);
@@ -153,12 +153,12 @@ if (tile.sprite === "FLOOR") {
 And then in `./src/state/ecs.js` we need to add `Layer400` to our player entity.
 
 ```diff
-export const player = ecs.createEntity();
+export const player = world.createEntity();
 player.add(Appearance, { char: "@", color: "#fff" });
 +player.add(Layer400);
 player.add(Position);
 
-export default ecs;
+export default world;
 ```
 
 Almost there! We need to query for each layer component so we can render everything in the correct order.
@@ -166,7 +166,7 @@ Almost there! We need to query for each layer component so we can render everyth
 Make `./src/systems/render.js` look like this:
 
 ```javascript
-import ecs from "../state/ecs";
+import world from "../state/ecs";
 import {
   Appearance,
   Position,
@@ -176,15 +176,15 @@ import {
 } from "../state/components";
 import { clearCanvas, drawCell } from "../lib/canvas";
 
-const layer100Entities = ecs.createQuery({
+const layer100Entities = world.createQuery({
   all: [Position, Appearance, Layer100],
 });
 
-const layer300Entities = ecs.createQuery({
+const layer300Entities = world.createQuery({
   all: [Position, Appearance, Layer300],
 });
 
-const layer400Entities = ecs.createQuery({
+const layer400Entities = world.createQuery({
   all: [Position, Appearance, Layer400],
 });
 
@@ -246,7 +246,7 @@ export const readCacheSet = (name, key, value) => {
 export default cache;
 ```
 
-We just set up an object to store our cache and create some helper functions for basic CRUD operations. Our entitiesAtLocation cache will be an object with locId keys. LocIds are just a stringified combination of the location x and y properities (e.g, '0,1'). The value at each key will be a [Set](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set) of entity ids. A Set has some advantages over an array in this case. Specifically we have a get method for simple access of values and it's super fast.
+We just set up an object to store our cache and create some helper functions for basic CRUD operations. Our entitiesAtLocation cache will be an object with locId keys. LocIds are just a stringified combination of the location x and y properties (e.g, '0,1'). The value at each key will be a [Set](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set) of entity ids. A Set has some advantages over an array in this case. Specifically we have a get method for simple access of values and it's super fast.
 
 The purpose of this cache is to track what entities are in each location. So to start we should add entities to the cache when they get the `Position` component. Geotic provides some lifecycle methods that can help with this. In our components file at `./src/state/components.js` we can add entities to the cache when the Position component is attached to an entity!
 
@@ -269,7 +269,7 @@ export class Position extends Component {
 Next we need to update our cache when an entity moves. The simplest way for us to do this right now is in our movement system at `./src/systems/movement.js`. After all the checks to determine if an entity is able to move and right before we update their position, we can update the cache like this:
 
 ```diff
-import ecs from "../state/ecs";
+import world from "../state/ecs";
 +import { addCacheSet, deleteCacheSet, readCacheSet } from "../state/cache";
 import { grid } from "../lib/canvas";
 import { Move } from "../state/components";
@@ -277,7 +277,7 @@ import { Move } from "../state/components";
 
 ```diff
 if (blockers.length) {
-  entity.remove(Move);
+  entity.remove(entity.move);
   return;
 }
 
@@ -299,18 +299,18 @@ Ok, now that our cache is all set up, let's use it! Still in `./src/systems/move
 ```javascript
 // check for blockers
 const blockers = [];
-for (const e of ecs.entities.all) {
-  if (e.position.x === mx && e.position.y === my && e.isBlocking) {
+for (const e of world._entities) {
+  if (e[1].position.x === mx && e[1].position.y === my && e[1].isBlocking) {
     blockers.push(e);
   }
 }
 if (blockers.length) {
-  entity.remove(Move);
+  entity.remove(entity.move);
   return;
 }
 ```
 
-With out new one that uses our cache:
+With the new one that uses our cache:
 
 ```javascript
 const blockers = [];
@@ -318,17 +318,17 @@ const blockers = [];
 const entitiesAtLoc = readCacheSet("entitiesAtLocation", `${mx},${my}`);
 
 for (const eId of entitiesAtLoc) {
-  if (ecs.getEntity(eId).isBlocking) {
+  if (world.getEntity(eId).isBlocking) {
     blockers.push(eId);
   }
 }
 if (blockers.length) {
-  entity.remove(Move);
+  entity.remove(entity.move);
   return;
 }
 ```
 
-The biggest change here is that we now only check the entities at our intended location if they are blocking. Previously we checked the location of every entity in the entire game to determine if it was both blocking AND in the place we wanted to go. We're going to need this information quite a bit moving forward so it makes sense to just rip off the bandaid and implement the cache.
+The biggest change here is that we now only check the entities at our intended location if they are blocking. Previously we checked the location of every entity in the entire game to determine if it was both blocking AND in the place we wanted to go. We're going to need this information quite a bit moving forward so it makes sense to just rip off the band aid and implement the cache.
 
 ---
 
@@ -455,16 +455,16 @@ Now that we have our Field of Vision algorithm in place we need to wire it up. W
 
 ```javascript
 import { readCacheSet } from "../state/cache";
-import ecs, { player } from "../state/ecs";
+import world, { player } from "../state/ecs";
 import { grid } from "../lib/canvas";
 import createFOV from "../lib/fov";
 import { IsInFov, IsOpaque, IsRevealed } from "../state/components";
 
-const inFovEntities = ecs.createQuery({
+const inFovEntities = world.createQuery({
   all: [IsInFov],
 });
 
-const opaqueEntities = ecs.createQuery({
+const opaqueEntities = world.createQuery({
   all: [IsOpaque],
 });
 
@@ -477,17 +477,17 @@ export const fov = () => {
   const FOV = createFOV(opaqueEntities, width, height, originX, originY, 10);
 
   // clear out stale fov
-  inFovEntities.get().forEach((x) => x.remove(IsInFov));
+  inFovEntities.get().forEach((x) => x.remove(x.isInFov));
 
   FOV.fov.forEach((locId) => {
     const entitiesAtLoc = readCacheSet("entitiesAtLocation", locId);
 
     if (entitiesAtLoc) {
       entitiesAtLoc.forEach((eId) => {
-        const entity = ecs.getEntity(eId);
+        const entity = world.getEntity(eId);
         entity.add(IsInFov);
 
-        if (!entity.has("IsRevealed")) {
+        if (!entity.has(IsRevealed)) {
           entity.add(IsRevealed);
         }
       });
@@ -508,23 +508,23 @@ export const fov = () => {
   const FOV = createFOV(opaqueEntities, width, height, originX, originY, 10);
 ```
 
-Next the system removes the component `IsInFov` from all entities that prevuosly had it. This clears out all the state from the last turn ensuring that we always have the latest data.
+Next the system removes the component `IsInFov` from all entities that previously had it. This clears out all the state from the last turn ensuring that we always have the latest data.
 
 The algorithm returns an array of locations within our hero's field of view. We need to find all the entities at each location and add an `IsInFov` component. If an entity has never been revealed we will add an `IsRevealed` component as well. This is why we created a cache earlier. Having to iterate through every entity in the game for every tile in FOV every turn... ugh. That would be bad.
 
 ```javascript
   // clear out stale fov
-  inFovEntities.get().forEach((x) => x.remove(IsInFov));
+  inFovEntities.get().forEach((x) => x.remove(x.isInFov));
 
   FOV.fov.forEach((locId) => {
     const entitiesAtLoc = readCacheSet("entitiesAtLocation", locId);
 
     if (entitiesAtLoc) {
       entitiesAtLoc.forEach((eId) => {
-        const entity = ecs.getEntity(eId);
+        const entity = world.getEntity(eId);
         entity.add(IsInFov);
 
-        if (!entity.has("IsRevealed")) {
+        if (!entity.has(IsRevealed)) {
           entity.add(IsRevealed);
         }
       });
@@ -586,7 +586,7 @@ import {
 
 ```diff
 if (tile.sprite === "WALL") {
-  const entity = ecs.createEntity();
+  const entity = world.createEntity();
   entity.add(Appearance, { char: "#", color: "#AAA" });
   entity.add(IsBlocking);
 +  entity.add(IsOpaque);
@@ -657,7 +657,7 @@ const processUserInput = () => {
 Now that we're adding the Position component in index.js we can delete the line where we were doing it in `./src/state/ecs.js`:
 
 ```diff
-export const player = ecs.createEntity();
+export const player = world.createEntity();
 player.add(Appearance, { char: "@", color: "#fff" });
 -player.add(Position);
 player.add(Layer400);
@@ -668,7 +668,7 @@ We're on the home stretch! We just need a couple more edits to our render system
 In `./src/systems/render.js` make the following changes:
 
 ```diff
-import ecs from "../state/ecs";
+import world from "../state/ecs";
 import {
   Appearance,
 +  IsInFov,
@@ -679,17 +679,17 @@ import {
 ```
 
 ```diff
-const layer100Entities = ecs.createQuery({
+const layer100Entities = world.createQuery({
   all: [Position, Appearance, Layer100],
 +  any: [IsInFov, IsRevealed],
 });
 
-const layer300Entities = ecs.createQuery({
+const layer300Entities = world.createQuery({
   all: [Position, Appearance, Layer300],
 +  any: [IsInFov, IsRevealed],
 });
 
-const layer400Entities = ecs.createQuery({
+const layer400Entities = world.createQuery({
 -  all: [Position, Appearance, Layer400],
 +  all: [Position, Appearance, Layer400, IsInFov],
 });

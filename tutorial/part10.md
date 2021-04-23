@@ -8,17 +8,17 @@ Geotic really does make saving super simple - so long as all your game state is 
 
 ```javascript
 const saveGame = () => {
-  const data = ecs.serialize();
+  const data = world.serialize();
   localStorage.setItem("savegame", data);
 };
 
 const loadGame = () => {
   const data = localStorage.getItem("savegame");
-  ecs.deserialize(data);
+  world.deserialize(data);
 };
 ```
 
-We have a few more things to keep track of so we won't be able to get away that easy. In addtion to saving our entities in geotic we need to save our cache, the message log, and the id of our player entity. Not bad really.
+We have a few more things to keep track of so we won't be able to get away that easy. In addition to saving our entities in geotic we need to save our cache, the message log, and the id of our player entity. Not bad really.
 
 The first thing we'll do is move our message log from `./src/state/ecs.js` to `./src/index.js`. This is just a refactor to consolidate our code a bit. It's not strictly required for saving. But it will make things a bit easier for us moving forward.
 
@@ -35,8 +35,8 @@ And then just put that code in `./src/index.js` and remove the import at the top
 
 ```diff
 import { targeting } from "./systems/targeting";
--import ecs, { addLog } from "./state/ecs";
-+import ecs from "./state/ecs";
+-import world, { addLog } from "./state/ecs";
++import world from "./state/ecs";
 import { IsInFov, Move, Position, Ai } from "./state/components";
 
 +export const messageLog = ["", "Welcome to Gobs 'O Goblins!", ""];
@@ -50,8 +50,8 @@ Now we just need to fix the imports in a few files that still expect our message
 `./src/systems/targeting.js`
 
 ```diff
--import ecs, { addLog } from "../state/ecs";
-+import ecs from "../state/ecs";
+-import world, { addLog } from "../state/ecs";
++import world from "../state/ecs";
 +import { addLog } from "../index";
 import { readCacheSet } from "../state/cache";
 ```
@@ -67,8 +67,8 @@ import { readCacheSet } from "../state/cache";
 `./src/systems/movement.js`
 
 ```diff
--import ecs, { addLog } from "../state/ecs";
-+import ecs from "../state/ecs";
+-import world, { addLog } from "../state/ecs";
++import world from "../state/ecs";
 +import { addLog } from "../index";
 import { addCacheSet, deleteCacheSet, readCacheSet } from "../state/cache";
 ```
@@ -117,7 +117,7 @@ We can import `serializeCache` add a `saveGame` function in `./src/index.js`.
 ```javascript
 const saveGame = () => {
   const gameSaveData = {
-    ecs: ecs.serialize(),
+    world: world.serialize(),
     cache: serializeCache(),
     playerId: player.id,
     messageLog,
@@ -159,14 +159,14 @@ const loadGame = () => {
     return;
   }
 
-  for (let entity of ecs.entities.all) {
+  for (let entity of world.getEntities()) {
     entity.destroy();
   }
 
-  ecs.deserialize(data.ecs);
+  world.deserialize(data.world);
   deserializeCache(data.cache);
 
-  player = ecs.getEntity(data.playerId);
+  player = world.getEntity(data.playerId);
 
   userInput = null;
   playerTurn = true;
@@ -194,25 +194,25 @@ const loadGame = () => {
 Next we destroy all existing entities - best to start with a clean slate.
 
 ```javascript
-for (let entity of ecs.entities.all) {
+for (let entity of world.getEntities()) {
   entity.destroy();
 }
 ```
 
-Then we deserialize our ecs entities and our cache
+Then we deserialize our world entities and our cache
 
 ```javascript
-ecs.deserialize(data.ecs);
+world.deserialize(data.world);
 deserializeCache(data.cache);
 ```
 
 With our entities all back in place we can use our store player id to get the player entity:
 
 ```javascript
-player = ecs.getEntity(data.playerId);
+player = world.getEntity(data.playerId);
 ```
 
-And then just reset the other little bits we track to their intitial state:
+And then just reset the other little bits we track to their initial state:
 
 ```javascript
 userInput = null;
@@ -237,8 +237,8 @@ We do need to make two more adjustments - our `player` and `messageLog` variable
 ```
 
 ```diff
--const player = ecs.createPrefab("Player");
-+let player = ecs.createPrefab("Player");
+-const player = world.createPrefab("Player");
++let player = world.createPrefab("Player");
 ```
 
 And finally we need a keybinding:
@@ -263,7 +263,7 @@ Our newGame function looks like this:
 
 ```javascript
 const newGame = () => {
-  for (let item of ecs.entities.all) {
+  for (let item of world.getEntities()) {
     item.destroy();
   }
   clearCache();
@@ -300,7 +300,7 @@ The body of this function already exists in `./src/index.js` - start by wrapping
     height: grid.map.height,
   });
 
-  let player = ecs.createPrefab("Player");
+  let player = world.createPrefab("Player");
   player.add(Position, {
     x: dungeon.rooms[0].center.x,
     y: dungeon.rooms[0].center.y,
@@ -312,27 +312,27 @@ The body of this function already exists in `./src/index.js` - start by wrapping
 
   times(5, () => {
     const tile = sample(openTiles);
-    ecs.createPrefab("Goblin").add(Position, { x: tile.x, y: tile.y });
+    world.createPrefab("Goblin").add(Position, { x: tile.x, y: tile.y });
   });
 
   times(10, () => {
     const tile = sample(openTiles);
-    ecs.createPrefab("HealthPotion").add(Position, { x: tile.x, y: tile.y });
+    world.createPrefab("HealthPotion").add(Position, { x: tile.x, y: tile.y });
   });
 
   times(10, () => {
     const tile = sample(openTiles);
-    ecs.createPrefab("ScrollLightning").add(Position, { x: tile.x, y: tile.y });
+    world.createPrefab("ScrollLightning").add(Position, { x: tile.x, y: tile.y });
   });
 
   times(10, () => {
     const tile = sample(openTiles);
-    ecs.createPrefab("ScrollParalyze").add(Position, { x: tile.x, y: tile.y });
+    world.createPrefab("ScrollParalyze").add(Position, { x: tile.x, y: tile.y });
   });
 
   times(10, () => {
     const tile = sample(openTiles);
-    ecs.createPrefab("ScrollFireball").add(Position, { x: tile.x, y: tile.y });
+    world.createPrefab("ScrollFireball").add(Position, { x: tile.x, y: tile.y });
   });
 
   fov(player);
@@ -345,11 +345,11 @@ The only modification we need to make is to initialize the `player` variable out
 Within the initGame function change this line:
 
 ```diff
--let player = ecs.createPrefab("Player");
-+player = ecs.createPrefab("Player");
+-let player = world.createPrefab("Player");
++player = world.createPrefab("Player");
 ```
 
-And intitialize the player variable with the others:
+And initialize the player variable with the others:
 
 ```diff
 +let player = {};
